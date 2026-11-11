@@ -1,0 +1,4487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HF Terminal</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#10131a}
+body{color:#e2e8f0;font-family:'Consolas','Courier New',monospace;user-select:none;-webkit-user-select:none}
+#app{display:flex;flex-direction:row;height:100vh;width:100vw}
+
+/* â•â• LEFT SIDEBAR â•â• */
+#sidebar{width:48px;min-width:48px;height:100%;background:#141722;border-right:1px solid #232736;display:flex;flex-direction:column;align-items:center;z-index:500;flex-shrink:0}
+.sb-brand{width:100%;height:40px;min-height:40px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#ff8c37;letter-spacing:2px;border-bottom:1px solid #232736;flex-shrink:0;text-shadow:0 0 8px rgba(255,140,55,.45)}
+.sb-nav{display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px;flex:1;width:100%}
+.sb-bot{display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px;width:100%;border-top:1px solid #232736}
+.sb-item{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;transition:all .15s;font-size:16px;color:#94a3b8;position:relative}
+.sb-item:hover{background:#1e2333;color:#f8fafc}
+.sb-item.active{background:#2a1a08;color:#ff8c37}
+.sb-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:18px;background:#ff8c37;border-radius:0 2px 2px 0;box-shadow:0 0 8px rgba(255,140,55,.6)}
+
+/* â•â• MAIN â•â• */
+#main{display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden}
+
+/* â•â• TOOLBAR â•â• */
+#tb{height:40px;min-height:40px;flex-shrink:0;background:#141722;border-bottom:1px solid #232736;display:flex;align-items:center;padding:0 12px;position:relative;z-index:300;gap:0}
+
+#sw{position:relative;margin-right:10px}
+#sb2{background:#1c202d;border:1px solid #2d3345;color:#f1f5f9;padding:4px 10px;border-radius:3px;font-size:12px;font-family:inherit;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:155px;transition:all .15s}
+#sb2:hover{border-color:#ff8c37;color:#ff8c37}
+#sarr{color:#94a3b8;font-size:9px;margin-left:auto}
+#sp{display:none;position:absolute;top:calc(100% + 3px);left:0;width:245px;background:#161924;border:1px solid #2d3345;border-radius:4px;box-shadow:0 14px 48px rgba(0,0,0,.85);flex-direction:column;z-index:600}
+#sp.open{display:flex}
+#sp-si{padding:8px 8px 4px}
+#sp-in{width:100%;background:#10131a;border:1px solid #2d3345;color:#f1f5f9;padding:5px 8px;border-radius:3px;font-size:11px;font-family:inherit;outline:none;transition:border-color .12s}
+#sp-in:focus{border-color:#ff8c37}
+#sp-ct{font-size:9px;color:#94a3b8;padding:1px 10px 4px;text-align:right}
+#sp-lst{overflow-y:auto;flex:1;max-height:300px}
+#sp-lst::-webkit-scrollbar{width:3px}
+#sp-lst::-webkit-scrollbar-thumb{background:#2a3042;border-radius:2px}
+.si{padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;border-bottom:1px solid #1c202d;transition:background .08s}
+.si:hover{background:#232838}.si.on{background:#2a1a08;border-left:2px solid #ff8c37}
+.si .sb3{font-size:12px;font-weight:700;color:#cbd5e1}.si.on .sb3{color:#ff8c37}
+.si .sq{font-size:9px;color:#94a3b8}.si .sp2{font-size:9px;color:#64748b;margin-left:auto}
+
+.sep{width:1px;height:20px;background:#282d3c;margin:0 8px;flex-shrink:0}
+#tf-w{display:flex;gap:1px}
+.tf{background:transparent;border:1px solid transparent;color:#94a3b8;padding:3px 8px;font-size:11px;font-family:inherit;cursor:pointer;border-radius:3px;transition:all .12s}
+.tf:hover{color:#f8fafc;background:#1e2333}.tf.on{color:#ff8c37;background:#2a1a08;border-color:#8c450a;text-shadow:0 0 6px rgba(255,140,55,.4);font-weight:700}
+
+/* â•â• DRAWING TOOLBAR â•â• */
+#draw-tb { display: flex; align-items: center; gap: 3px; padding: 0 4px; margin: 0 2px; }
+.draw-btn { background: #1c202d; border: 1px solid #2d3345; color: #cbd5e1; cursor: pointer; font-size: 12px; width: 28px; height: 25px; display: flex; align-items: center; justify-content: center; border-radius: 3px; transition: all .12s; font-family: inherit; line-height: 1; }
+.draw-btn:hover { background: #252b3d; color: #fff; border-color: #3e465e; }
+.draw-btn.active { background: #2e1a06; border-color: #ff8c37; color: #ff8c37; box-shadow: 0 0 6px rgba(255,140,55,.35); }
+#draw-del-btn { background: #1c202d; border: 1px solid #2d3345; color: #94a3b8; cursor: pointer; font-size: 11px; width: 28px; height: 25px; display: flex; align-items: center; justify-content: center; border-radius: 3px; transition: all .12s; }
+#draw-del-btn:hover { background: #331515; color: #ef5350; border-color: #6d2020; }
+
+/* â•â• DRAWING EDIT MODAL â•â• */
+#draw-edit-modal { display: none; position: fixed; inset: 0; z-index: 950; align-items: center; justify-content: center; background: rgba(0,0,0,.75); backdrop-filter: blur(2px); }
+#draw-edit-box { background: #161924; border: 1px solid #2d3345; border-radius: 6px; padding: 18px 20px; min-width: 330px; max-width: 440px; box-shadow: 0 16px 48px rgba(0,0,0,.85); color: #e2e8f0; font-family: inherit; }
+#draw-edit-title { font-size: 12px; color: #ff8c37; letter-spacing: 2px; margin-bottom: 14px; font-weight: 700; border-bottom: 1px solid #232736; padding-bottom: 8px; }
+
+/* â•â• INDICATOR DROPDOWN â•â• */
+#ind-w { position:relative; margin-left:8px; }
+#ind-btn { background:#1c202d; border:1px solid #2d3345; color:#f1f5f9; padding:4px 10px; border-radius:3px; font-size:11px; font-family:inherit; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; min-width:115px; transition:all .15s }
+#ind-btn:hover { border-color:#ff8c37; color:#ff8c37 }
+#ind-arr { color:#94a3b8; font-size:9px; margin-left:auto }
+#ind-dd { display:none; position:absolute; top:calc(100% + 3px); left:0; width:190px; background:#161924; border:1px solid #2d3345; border-radius:4px; box-shadow:0 14px 48px rgba(0,0,0,.85); flex-direction:column; z-index:600; padding:4px 0 }
+#ind-dd.open { display:flex }
+.ind-item { padding:7px 10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; color:#cbd5e1; border-bottom:1px solid #1c202d; transition:background .08s, color .08s }
+.ind-item:hover { background:#232838; color:#fff }
+.ind-item:last-child { border-bottom:none }
+.ind-sw { width:14px; height:14px; border-radius:3px; border:1px solid #3e465e; background:#12151d; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; position:relative }
+.ind-sw::after { content:''; width:6px; height:6px; border-radius:1px; background:transparent; transition:all .12s }
+.ind-sw.on { border-color:#ff8c37; background:#2a1a08 }
+.ind-sw.on::after { background:#ff8c37; box-shadow:0 0 6px rgba(255,140,55,.6) }
+
+.ind-cfg-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all .12s;
+  line-height: 1;
+}
+.ind-cfg-btn:hover {
+  background: #252b3d;
+  color: #ff8c37;
+}
+
+/* â•â• CONFIGURATION MODAL â•â• */
+.cfg-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 3, 3, 0.80);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.cfg-modal.open {
+  display: flex;
+}
+.cfg-content {
+  background: #161924;
+  border: 1px solid #2d3345;
+  border-radius: 6px;
+  width: 320px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cfg-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #232736;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1b1f2d;
+}
+.cfg-header h3 {
+  font-size: 11px;
+  color: #ff8c37;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: inherit;
+  font-weight: 700;
+}
+#cfg-close, #cvd-cfg-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+#cfg-close:hover, #cvd-cfg-close:hover {
+  color: #ef5350;
+}
+.cfg-body {
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cfg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cfg-label-w {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.cfg-label-w span {
+  color: #ff8c37;
+  font-weight: 700;
+}
+
+/* Custom range input slider design matching the attachment */
+.cfg-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #252b3d;
+  border-radius: 2px;
+  outline: none;
+}
+.cfg-row input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+}
+.cfg-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00b2ff;
+  cursor: pointer;
+  margin-top: -5px;
+  box-shadow: 0 0 6px rgba(0, 178, 255, 0.6);
+  transition: background 0.1s;
+}
+.cfg-row input[type="range"]::-webkit-slider-thumb:hover {
+  background: #33c2ff;
+}
+
+.cfg-footer {
+  padding: 10px 16px 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+.cfg-number-input {
+  background: #10131a;
+  border: 1px solid #2d3345;
+  color: #f1f5f9;
+  font-size: 11px;
+  font-family: Consolas, monospace;
+  padding: 5px 8px;
+  border-radius: 3px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cfg-number-input:focus {
+  border-color: #8c450a;
+  color: #ff8c37;
+}
+.cfg-number-input::placeholder {
+  color: #64748b;
+}
+
+#tb-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+#btn-go{background:#1c202d;border:1px solid #2d3345;color:#94a3b8;padding:2px 7px;font-size:11px;font-family:inherit;cursor:pointer;border-radius:3px;transition:all .12s}
+#btn-go:hover{color:#ff8c37;border-color:#8c450a;background:#232838}
+#tv-dot{font-size:9px;padding:2px 8px;border-radius:2px;background:#0f2416;color:#34d399;border:1px solid #1c5230;letter-spacing:.5px}
+#tv-dot.err{background:#260e0e;color:#f87171;border-color:#5c1d1d}
+#bw-dot{font-size:9px;padding:2px 8px;border-radius:2px;background:#1c202d;color:#94a3b8;border:1px solid #2d3345;letter-spacing:.5px}
+#bw-dot.live{background:#2a1a08;color:#ff8c37;border-color:#8c450a;text-shadow:0 0 6px rgba(255,140,55,.5)}
+
+/* â•â• CHART â•â• */
+#cw{flex:1;min-height:0;position:relative;overflow:hidden;background:#10131a}
+#cv{display:block;width:100%;height:100%}
+#ohlcv-ov{position:absolute;top:10px;left:10px;font-size:12px;pointer-events:none;line-height:2;z-index:5}
+
+/* Buffer-more indicator */
+#buf-ind{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:#1f1406;border:1px solid #633307;color:#f97316;
+  font-size:10.5px;padding:4px 14px;border-radius:3px;
+  display:none;align-items:center;gap:7px;z-index:6;
+  box-shadow:0 4px 20px rgba(0,0,0,.7);
+}
+#buf-ind.show{display:flex}
+#buf-dot{width:6px;height:6px;border-radius:50%;background:#ff8c37;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Loading overlay */
+#ld-ov{position:absolute;inset:0;background:rgba(16,19,26,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:14px}
+#ld-ov.off{display:none}
+#ld-brand{font-size:9px;color:#64748b;letter-spacing:4px;margin-bottom:6px}
+#ld-title{font-size:15px;color:#ff8c37;letter-spacing:4px;font-weight:900;text-shadow:0 0 16px rgba(255,140,55,.5)}
+#ld-bar{width:200px;height:2px;background:#252b3d;border-radius:1px;overflow:hidden}
+#ld-fill{height:100%;width:35%;background:linear-gradient(90deg,transparent,#ff8c37,transparent);animation:ldslide 1.4s ease-in-out infinite}
+@keyframes ldslide{0%{transform:translateX(-100%)}100%{transform:translateX(290%)}}
+#ld-msg{font-size:10px;color:#94a3b8;letter-spacing:1.5px;margin-top:4px}
+
+/* â•â• STATUS BAR â•â• */
+#sb{height:22px;min-height:22px;flex-shrink:0;background:#141722;border-top:1px solid #232736;display:flex;align-items:center;padding:0 12px;font-size:10px;color:#94a3b8;gap:18px;letter-spacing:.3px}
+#sb-r{margin-left:auto;color:#64748b}
+
+/* â•â• CALENDAR SIDEBAR â•â• */
+#cal-sidebar{width:0;min-width:0;max-width:500px;height:100%;background:#141722;border-left:1px solid #232736;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative;transition:none}
+#cal-sidebar.open{width:320px;min-width:200px}
+#cal-drag{position:absolute;left:-4px;top:0;width:8px;height:100%;cursor:col-resize;z-index:600;background:transparent}
+#cal-drag:hover,#cal-drag.active{background:rgba(255,140,55,.15)}
+#cal-drag::after{content:'';position:absolute;left:3px;top:50%;transform:translateY(-50%);width:2px;height:32px;background:#2d3345;border-radius:1px;transition:background .15s}
+#cal-drag:hover::after,#cal-drag.active::after{background:#ff8c37}
+
+#cal-hdr{height:40px;min-height:40px;flex-shrink:0;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid #232736;gap:8px}
+#cal-title{font-size:10px;font-weight:700;color:#ff8c37;letter-spacing:1.5px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cal-status{font-size:8px;color:#94a3b8;letter-spacing:.5px}
+#cal-refresh{background:#1c202d;border:1px solid #2d3345;color:#94a3b8;padding:2px 6px;font-size:10px;font-family:inherit;cursor:pointer;border-radius:3px;transition:all .12s;flex-shrink:0}
+#cal-refresh:hover{color:#ff8c37;border-color:#8c450a;background:#232838}
+#cal-refresh.spin{animation:cal-spin .6s linear}
+@keyframes cal-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+#cal-close{background:transparent;border:none;color:#94a3b8;font-size:13px;cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0}
+#cal-close:hover{color:#ef5350}
+
+#cal-filters{height:28px;min-height:28px;flex-shrink:0;display:flex;align-items:center;padding:0 8px;gap:4px;border-bottom:1px solid #232736}
+.cal-chip{background:#1c202d;border:1px solid #2d3345;color:#94a3b8;padding:1px 7px;font-size:9px;font-family:inherit;cursor:pointer;border-radius:2px;transition:all .12s;white-space:nowrap}
+.cal-chip:hover{color:#f8fafc;background:#252b3d}
+.cal-chip.on{background:#2a1a08;border-color:#ff8c37;color:#ff8c37}
+
+#cal-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 0}
+#cal-list::-webkit-scrollbar{width:3px}
+#cal-list::-webkit-scrollbar-thumb{background:#2a3042;border-radius:2px}
+.cal-day-hdr{position:sticky;top:0;z-index:2;padding:5px 12px;font-size:9px;font-weight:700;color:#cbd5e1;letter-spacing:1px;background:#141722;border-bottom:1px solid #232736}
+.cal-day-hdr.today{color:#ff8c37}
+.cal-ev{display:flex;align-items:flex-start;gap:6px;padding:5px 12px;border-bottom:1px solid #1c202d;transition:background .1s;cursor:default;font-size:10px;line-height:1.5}
+.cal-ev:hover{background:#1a1e2a}
+.cal-ev.upcoming{border-left:2px solid #f5a623}
+.cal-ev.soon{border-left:2px solid #4caf50}
+.cal-time{width:38px;flex-shrink:0;color:#94a3b8;font-variant-numeric:tabular-nums}
+.cal-impact{width:20px;flex-shrink:0;display:flex;align-items:center;gap:1px;padding-top:1px}
+.cal-impact i{display:block;width:3px;height:6px;border-radius:.5px;background:#2d3345}
+.cal-impact.i3 i{background:#f0485a}
+.cal-impact.i2 i:nth-child(-n+2){background:#f5a623}
+.cal-impact.i1 i:first-child{background:#7b8dbf}
+.cal-body{flex:1;min-width:0}
+.cal-name{color:#f1f5f9;word-break:break-word}
+.cal-vals{display:flex;gap:6px;margin-top:2px;font-size:9px;color:#94a3b8}
+.cal-val{white-space:nowrap}
+.cal-val.good{color:#4caf50}
+.cal-val.bad{color:#ef5350}
+.cal-empty{padding:30px 12px;text-align:center;color:#64748b;font-size:10px}
+
+/* Expandable event detail */
+.cal-ev{cursor:pointer}
+.cal-detail{display:none;margin-top:5px;padding:6px 8px;background:#10131a;border-radius:3px;border:1px solid #232736}
+.cal-ev.expanded .cal-detail{display:block}
+.cal-ev.expanded{background:#181b24;border-bottom-color:#232736}
+.cal-detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.cal-detail-cell{text-align:center}
+.cal-detail-label{font-size:8px;color:#94a3b8;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px}
+.cal-detail-value{font-size:11px;color:#e2e8f0;font-weight:600}
+.cal-detail-value.good{color:#4caf50}
+.cal-detail-value.bad{color:#ef5350}
+.cal-usd-signal{margin-top:6px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:2px}
+.cal-usd-signal.bullish{background:#0e2a14;color:#4caf50;border:1px solid #1a5226}
+.cal-usd-signal.bearish{background:#2a0e0e;color:#ef5350;border:1px solid #521a1a}
+.cal-usd-signal.neutral{background:#161924;color:#94a3b8;border:1px solid #2d3345}
+
+/* CVD indicator grid & checkboxes styling */
+.cvd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+.cvd-item-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #141722;
+  border: 1px solid #2d3345;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+.cvd-item-wrap:hover:not(.disabled) {
+  border-color: #ff8c37;
+  background: #231c15;
+}
+.cvd-item-wrap.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #10131a;
+}
+.cvd-cb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #3e465e;
+  border-radius: 2px;
+  background: #10131a;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.12s;
+}
+.cvd-cb:checked {
+  background: #ff8c37;
+  border-color: #ff8c37;
+}
+.cvd-cb:checked::after {
+  content: '✓';
+  position: absolute;
+  color: #000;
+  font-size: 10px;
+  font-weight: 900;
+  left: 2px;
+  top: -1px;
+}
+.cvd-cb:disabled {
+  background: #1a1e28;
+  border-color: #2d3345;
+}
+.cvd-label {
+  font-size: 11px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.cvd-item-wrap.disabled .cvd-label {
+  color: #64748b;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- â•â• LEFT SIDEBAR â•â• -->
+  <div id="sidebar">
+    <div class="sb-brand">HF</div>
+    <nav class="sb-nav">
+      <div class="sb-item active" id="nav-chart" title="Terminal Chart">▦</div>
+      <div class="sb-item" id="nav-watch" title="Economic Calendar">📅</div>
+    </nav>
+    <div class="sb-bot">
+      <div class="sb-item" id="nav-set" title="Settings (coming soon)">⊙</div>
+    </div>
+  </div>
+
+  <!-- â•â• MAIN CONTENT â•â• -->
+  <div id="main">
+    <div id="tb">
+      <div id="sw">
+        <button id="sb2"><span id="sym-lbl">——</span><span id="sarr">▾</span></button>
+        <div id="sp">
+          <div id="sp-si"><input id="sp-in" type="text" placeholder="Search pair…" autocomplete="off" spellcheck="false"></div>
+          <div id="sp-ct"></div>
+          <div id="sp-lst"></div>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div id="tf-w">
+        <button class="tf" data-tf="1">1m</button>
+        <button class="tf" data-tf="5">5m</button>
+        <button class="tf" data-tf="15">15m</button>
+        <button class="tf" data-tf="30">30m</button>
+        <button class="tf on" data-tf="60">1H</button>
+        <button class="tf" data-tf="240">4H</button>
+        <button class="tf" data-tf="D">1D</button>
+        <button class="tf" data-tf="W">1W</button>
+      </div>
+      <div class="sep"></div>
+
+      <!-- â•â• DRAWING TOOLBAR â•â• -->
+      <div id="draw-tb">
+        <button class="draw-btn" data-tool="line" title="Trend Line (L)">&#9585;</button>
+        <button class="draw-btn" data-tool="rect" title="Rectangle (R)">&#9645;</button>
+        <button class="draw-btn" data-tool="fibo" title="Fibonacci Retracement (F)">&#8788;</button>
+        <button class="draw-btn" data-tool="path" title="Path with Arrow (P)">&#10549;</button>
+        <button class="draw-btn" data-tool="longshort" title="Long/Short Position (S)">&#9878;</button>
+        <button id="draw-del-btn" title="Delete selected (Del / Backspace)">&#128465;</button>
+      </div>
+      <div class="sep"></div>
+
+      <div id="ind-w">
+        <button id="ind-btn">Indicator <span id="ind-arr">▾</span></button>
+        <div id="ind-dd">
+          <div class="ind-item" data-ind="volume">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ind-sw on" id="sw-volume"></span> Volume
+            </div>
+          </div>
+          <div class="ind-item" data-ind="vp">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ind-sw on" id="sw-vp"></span> Volume Profile
+            </div>
+          </div>
+          <div class="ind-item" data-ind="bubble">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ind-sw" id="sw-bubble"></span> Bubble Size
+            </div>
+            <button class="ind-cfg-btn" title="Configure Bubble Size">⋮</button>
+          </div>
+          <div class="ind-item" data-ind="cvd">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ind-sw" id="sw-cvd"></span> Agg. CVD Spot
+            </div>
+            <button class="ind-cfg-btn" id="cvd-cfg-btn" title="Configure CVD Exchanges">⋮</button>
+          </div>
+          <div class="ind-item" data-ind="ha">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ind-sw" id="sw-ha"></span> Heavy Absorption
+            </div>
+          </div>
+          <div class="ind-item" data-ind="hvn">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ind-sw" id="sw-hvn"></span> HVN Profile
+            </div>
+            <button class="ind-cfg-btn" id="hvn-cfg-btn" title="Configure HVN Profile">⋮</button>
+          </div>
+        </div>
+      </div>
+      <div id="tb-r">
+        <button id="btn-go" title="Jump to latest">▶▶</button>
+        <span id="tv-dot">TV â—</span>
+        <span id="bw-dot">WS ○</span>
+      </div>
+    </div>
+
+    <div id="cw">
+      <canvas id="cv"></canvas>
+      <div id="ohlcv-ov"></div>
+      <div id="buf-ind"><span id="buf-dot"></span><span id="buf-txt">Loading history…</span></div>
+      <div id="ld-ov">
+        <div id="ld-brand">HEDGE FUND TERMINAL</div>
+        <div id="ld-title">HF</div>
+        <div id="ld-bar"><div id="ld-fill"></div></div>
+        <div id="ld-msg">Connecting…</div>
+      </div>
+    </div>
+
+    <div id="sb">
+      <span id="sb-bars">Bars: —</span>
+      <span id="sb-last">Last: —</span>
+      <span id="sb-range">Range: —</span>
+      <span id="sb-r">—</span>
+    </div>
+  </div>
+
+  <!-- â•â• RIGHT SIDEBAR: Economic Calendar â•â• -->
+  <div id="cal-sidebar">
+    <div id="cal-drag"></div>
+    <div id="cal-hdr">
+      <span id="cal-title">ECONOMIC CALENDAR</span>
+      <span id="cal-status"></span>
+      <button id="cal-refresh" title="Refresh">↻</button>
+      <button id="cal-close" title="Close">×</button>
+    </div>
+    <div id="cal-filters">
+      <button class="cal-chip on" data-impact="all">All</button>
+      <button class="cal-chip" data-impact="3">High</button>
+      <button class="cal-chip" data-impact="2">Med</button>
+      <button class="cal-chip" data-impact="1">Low</button>
+    </div>
+    <div id="cal-list"></div>
+  </div>
+  <!-- Indicator Settings Modal -->
+  <div id="cfg-modal" class="cfg-modal">
+    <div class="cfg-content">
+      <div class="cfg-header">
+        <h3>Bubble Configuration</h3>
+        <button id="cfg-close">&times;</button>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <div class="cfg-label-w">
+            <label for="cfg-min-token">Min Size (Token/Coin)</label>
+          </div>
+          <input type="number" id="cfg-min-token" class="cfg-number-input" min="0" step="any" placeholder="e.g. 15" value="1">
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w">
+            <label for="cfg-multiplier">Size Multiplier</label>
+            <span id="val-multiplier">1x</span>
+          </div>
+          <input type="range" id="cfg-multiplier" min="1" max="10" value="1" step="0.1">
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- CVD Configuration Modal -->
+  <div id="cvd-cfg-modal" class="cfg-modal">
+    <div class="cfg-content">
+      <div class="cfg-header">
+        <h3>Agg. CVD Exchanges</h3>
+        <button id="cvd-cfg-close">&times;</button>
+      </div>
+      <div class="cfg-body">
+        <p style="font-size: 9px; color: #94a3b8; margin-bottom: 12px; letter-spacing: 0.5px; line-height: 1.4;">Select spot exchanges to aggregate. At least one exchange must be active.</p>
+        <div id="cvd-exchanges-grid" class="cvd-grid">
+          <!-- Checkboxes generated dynamically in JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HVN Profile Configuration Modal -->
+  <div id="hvn-cfg-modal" class="cfg-modal">
+    <div class="cfg-content">
+      <div class="cfg-header">
+        <h3>HVN Profile Config</h3>
+        <button id="hvn-cfg-close">&times;</button>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-row">
+          <div class="cfg-label-w"><label for="hvn-anchor">Anchor Period</label></div>
+          <select id="hvn-anchor" class="cfg-number-input" style="width:100%">
+            <option value="15">15 Minutes</option>
+            <option value="30">30 Minutes</option>
+            <option value="60">1 Hour</option>
+            <option value="240">4 Hours</option>
+            <option value="D" selected>Daily</option>
+            <option value="W">Weekly</option>
+          </select>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w">
+            <label for="hvn-threshold">HVN Threshold (%)</label>
+            <span id="val-hvn-threshold">70%</span>
+          </div>
+          <input type="range" id="hvn-threshold" min="10" max="95" value="70" step="5">
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w"><label for="hvn-rowticks">Row Height (ticks)</label></div>
+          <input type="number" id="hvn-rowticks" class="cfg-number-input" min="1" max="200" value="20">
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w"><label for="hvn-maxzones">Max Zones</label></div>
+          <input type="number" id="hvn-maxzones" class="cfg-number-input" min="1" max="50" value="15">
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w" style="flex:1"><label for="hvn-show-profile">Show Profile Histogram (Vertical)</label></div>
+          <input type="checkbox" id="hvn-show-profile" checked style="accent-color:#ff8c37; width:16px; height:16px; cursor:pointer;">
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w" style="flex:1"><label for="hvn-poc">Show POC Line</label></div>
+          <input type="checkbox" id="hvn-poc" checked style="accent-color:#ff8c37; width:16px; height:16px; cursor:pointer;">
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label-w" style="flex:1"><label for="hvn-show-labels">Show Volume & Delta % Labels</label></div>
+          <input type="checkbox" id="hvn-show-labels" checked style="accent-color:#ff8c37; width:16px; height:16px; cursor:pointer;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- â•â• DRAWING EDIT MODAL â•â• -->
+  <div id="draw-edit-modal">
+    <div id="draw-edit-box">
+      <div id="draw-edit-title">EDIT OBJECT</div>
+      <div id="draw-edit-body"></div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// LAYOUT CONSTANTS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const PA_W   = 82;   // price-axis strip width (right)
+const TA_H   = 26;   // time-axis strip height (bottom)
+const VOL_R  = 0.14;
+const PAD_T  = 12;
+const PAD_B  = 6;
+const MIN_BW = 1;
+const MAX_BW = 100;
+const EDGE_BARS = 5; // trigger buffer-more when the oldest bar is within 5 bars of the left edge
+const WIB_OFFSET_S = 7 * 3600; // UTC+7 — WIB (Waktu Indonesia Barat)
+
+// Volume Profile per-candle settings
+const VP_MIN_BW   = 8;   // minimum barW (px) to render VP overlay
+const VP_BINS     = 22;  // number of price buckets per candle
+const VP_MAX_FRAC = 0.82; // VP bar extends up to this fraction of barW
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// STATE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let bars      = [];
+let sym       = 'BTCUSDT';
+let tf        = '60';
+let tfSec     = 3600;
+let nextClose = 0;
+let loading   = true;
+let indicators = { volume: true, vp: true, bubble: false, cvd: false, ha: false, hvn: false };
+let tradeAgg  = {};
+let bubbleConfig = {
+  multiplier: parseFloat(localStorage.getItem('hf_bubble_multiplier') || '1'),
+  minToken: parseFloat(localStorage.getItem('hf_bubble_minToken') || '1')
+};
+let cvdData = [];
+const ALL_CVD_EXCHANGES = ['bybit', 'binance', 'okx', 'mexc', 'bingx', 'bitstamp', 'bitunix', 'coinbase'];
+let cvdConfig = {
+  exchanges: JSON.parse(localStorage.getItem('hf_cvd_exchanges') || JSON.stringify(ALL_CVD_EXCHANGES))
+};
+let cvdExchangeStatus = []; // Holds latest API connection statuses
+
+// ── Heavy Absorption state ──
+let haData = [];  // Array of { barTime, price, volume, side }
+
+// ── HVN Profile state ──
+let hvnZones = [];     // Array of { top, bottom, poc, startIdx, touched, isPOC, volume, pct }
+let hvnPeriods = [];   // Cached volume profile histograms per anchor period
+let hvnConfig = {
+  anchor: localStorage.getItem('hf_hvn_anchor') || 'D',       // D, 240, 60, 30, 15, W
+  rowTicks: parseInt(localStorage.getItem('hf_hvn_rowTicks') || '20'),
+  threshold: parseInt(localStorage.getItem('hf_hvn_threshold') || '70'),
+  gapTol: parseInt(localStorage.getItem('hf_hvn_gapTol') || '1'),
+  minCluster: parseInt(localStorage.getItem('hf_hvn_minCluster') || '1'),
+  graceBars: parseInt(localStorage.getItem('hf_hvn_graceBars') || '2'),
+  maxZones: parseInt(localStorage.getItem('hf_hvn_maxZones') || '15'),
+  showPOC: localStorage.getItem('hf_hvn_showPOC') !== 'false',
+  showProfile: localStorage.getItem('hf_hvn_showProfile') !== 'false',
+  showLabels: localStorage.getItem('hf_hvn_showLabels') !== 'false'
+};
+let hvnDirty = true; // Flag to recompute HVN zones
+let volMultiplier = 1.0;
+let cvdMultiplier = 1.0;
+let volPaneHeight = null;
+let cvdPaneHeight = null;
+
+// ── Camera ──
+// bx(i) = (i - leftBar + 0.5) * barW  — same continuous-index model as before.
+// Panning (leftBar -= dx/barW) is already pixel-exact.
+// Zooming now anchors at the PHANTOM "next bar" position (i = bars.length),
+// a fixed screen reference point independent of cursor — this matches the
+// reference terminal (order-flow-heatmap/Footprint.tsx), which zooms the
+// same way: multiplying candle width while the right-edge reference point
+// stays put, rather than trying to keep whatever's under the cursor fixed.
+let leftBar = 0, barW = 10;
+
+// ── Price scale ──
+// psCtr  : locked price center (null = auto-compute from visible bars)
+// psHalf : locked half-range in price units (null = auto-compute from visible bars * psf)
+// psf    : scale multiplier applied when psHalf is null (auto mode)
+// Both psCtr and psHalf are set together when the user starts panning,
+// so NEITHER the center nor the span drifts as new bars come into view.
+let psf = 1.0, psCtr = null, psHalf = null;
+
+// ── Mouse / drag state ──
+let mx = -1, my = -1;
+let dragMode = null;      // null | 'pan' | 'zoomX' | 'zoomY'
+let lastMX = 0, lastMY = 0;
+
+// On-demand history buffering (TradingView-style lazy load)
+// bufGen is incremented on every pair/TF switch; triggerBufferMore captures
+// it at call-time and discards the response if the generation has changed.
+const bufState = { busy: false, reachedStart: false, target: 5000, gen: 0 };
+
+// ── Volume Profile sub-bar cache ──
+// Key: `${symbol}:${subInterval}` → sorted array of {time, high, low, volume}
+// A separate covered-range Map tracks what time windows have been fetched.
+const vpCache     = new Map(); // cacheKey → bar[]
+const vpCovered   = new Map(); // cacheKey → { min, max } (seconds)
+let   vpFetching  = false;
+let   vpFetchTimer = null;
+
+// Map: main TF → Bybit sub-interval for VP source data
+const VP_SUB_IV = { '5':'1','15':'1','30':'1','60':'1','240':'5','D':'60','W':'240' };
+function vpSubIv(mainTf) { return VP_SUB_IV[String(mainTf)] || null; }
+
+// Momentum / inertia panning (horizontal only — bonus on top of the
+// reference model, not present there, but doesn't conflict with it)
+let velX = 0, lastMoveT = 0, lastMoveX = 0, momentumRAF = null;
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// CANVAS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const cv   = document.getElementById('cv');
+const ctx  = cv.getContext('2d');
+const wrap = document.getElementById('cw');
+
+// Logical canvas dimensions (unscaled/CSS pixels)
+let wWidth = 0, wHeight = 0;
+
+const CW   = () => wWidth - PA_W;
+const CH   = () => wHeight - TA_H;
+
+function getPaneLayout() {
+  const ch = CH();
+  let mainH = ch;
+  let volH = 0;
+  let cvdH = 0;
+  
+  const showVol = indicators.volume;
+  const showCvd = indicators.cvd;
+  
+  // Dynamic height configuration with fallback defaults (12% of container)
+  const defaultH = Math.floor(ch * 0.12);
+  const targetVolH = volPaneHeight !== null ? volPaneHeight : defaultH;
+  const targetCvdH = cvdPaneHeight !== null ? cvdPaneHeight : defaultH;
+  
+  if (showVol && showCvd) {
+    volH = targetVolH;
+    cvdH = targetCvdH;
+    mainH = ch - volH - cvdH;
+  } else if (showVol) {
+    volH = volPaneHeight !== null ? volPaneHeight : Math.floor(ch * 0.14);
+    mainH = ch - volH;
+  } else if (showCvd) {
+    cvdH = cvdPaneHeight !== null ? cvdPaneHeight : Math.floor(ch * 0.14);
+    mainH = ch - cvdH;
+  }
+  
+  // Safety guard: ensure the main candlestick chart area has at least 100px height
+  if (mainH < 100) {
+    const excess = 100 - mainH;
+    if (showVol && showCvd) {
+      volH = Math.max(30, volH - Math.ceil(excess / 2));
+      cvdH = Math.max(30, cvdH - Math.floor(excess / 2));
+      mainH = ch - volH - cvdH;
+    } else if (showVol) {
+      volH = Math.max(30, volH - excess);
+      mainH = ch - volH;
+    } else if (showCvd) {
+      cvdH = Math.max(30, cvdH - excess);
+      mainH = ch - cvdH;
+    }
+  }
+  
+  const volT = mainH;
+  const cvdT = mainH + volH;
+  
+  return { mainH, volH, cvdH, volT, cvdT };
+}
+
+const MH   = () => getPaneLayout().mainH;
+const VH   = () => getPaneLayout().volH;
+const VT   = () => getPaneLayout().volT;
+const CVDH = () => getPaneLayout().cvdH;
+const CVDT = () => getPaneLayout().cvdT;
+
+const bx   = i => (i - leftBar + 0.5) * barW;
+const ib   = x => x / barW + leftBar - 0.5;
+const inPA = x => x >= CW();   // over the right price-axis strip
+const inTA = y => y >= CH();   // over the bottom time-axis strip
+
+function canvasXY(e) {
+  const rect = cv.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function timeToBarIdx(t) {
+  if (!bars.length) return 0;
+  const lastB = bars[bars.length - 1];
+  if (t >= lastB.time) {
+    return (bars.length - 1) + (t - lastB.time) / tfSec;
+  }
+  const firstB = bars[0];
+  if (t <= firstB.time) {
+    return (t - firstB.time) / tfSec;
+  }
+  let lo = 0, hi = bars.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (bars[mid].time < t) lo = mid + 1;
+    else hi = mid;
+  }
+  if (lo === 0) return 0;
+  const b0 = bars[lo - 1], b1 = bars[lo];
+  const span = b1.time - b0.time;
+  const frac = span > 0 ? (t - b0.time) / span : 0;
+  return lo - 1 + frac;
+}
+
+function tp2xy(pt) {
+  const pr = calcPR();
+  const idx = timeToBarIdx(pt.time);
+  return { x: bx(idx), y: p2y(pt.price, pr.lo, pr.hi) };
+}
+
+function xy2tp(x, y) {
+  const pr = calcPR();
+  const i = ib(x);
+  let time = 0;
+  if (bars.length) {
+    if (i >= bars.length - 1) {
+      const lastB = bars[bars.length - 1];
+      time = Math.round(lastB.time + (i - (bars.length - 1)) * tfSec);
+    } else if (i <= 0) {
+      const firstB = bars[0];
+      time = Math.round(firstB.time + i * tfSec);
+    } else {
+      const floorIdx = Math.floor(i);
+      const ceilIdx = Math.min(bars.length - 1, floorIdx + 1);
+      const frac = i - floorIdx;
+      time = Math.round(bars[floorIdx].time + frac * (bars[ceilIdx].time - bars[floorIdx].time));
+    }
+  }
+  const price = y2p(y, pr.lo, pr.hi);
+  return { time, price };
+}
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  wWidth  = wrap.clientWidth;
+  wHeight = wrap.clientHeight;
+  
+  // Set physical backing store dimensions (multiplied by devicePixelRatio)
+  cv.width  = wWidth * dpr;
+  cv.height = wHeight * dpr;
+  
+  // Reset transforms and apply scale factor to all subsequent drawing context calls
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  
+  render();
+}
+new ResizeObserver(resize).observe(wrap);
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// CAMERA — free movement, fixed-anchor zoom
+// (ported from order-flow-heatmap/components/Footprint.tsx)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+/**
+ * Horizontal zoom. factor>1 = zoom in (bigger bars).
+ * Anchors at the phantom "next bar" position (bars.length), a fixed
+ * reference point — NOT the mouse cursor. This is the exact behavior of
+ * the reference terminal's CANDLE_WIDTH zoom (right-edge-relative,
+ * position-independent — the same math runs whether triggered by wheel
+ * anywhere on the chart or by dragging the time axis).
+ */
+function zoomH(f) {
+  // Freeze Y scale to current visible range to prevent Y auto-fit shifts during horizontal zoom
+  if (psHalf === null && bars.length) {
+    const pr = calcPR();
+    psHalf = (pr.hi - pr.lo) / 2;
+    if (psCtr === null) psCtr = (pr.lo + pr.hi) / 2;
+  }
+  const nw = Math.max(MIN_BW, Math.min(MAX_BW, barW * f));
+  const N  = bars.length;
+  leftBar = N + 0.5 - (N - leftBar + 0.5) * barW / nw;
+  barW = nw;
+}
+
+/**
+ * Horizontal zoom anchored at canvas X pixel px — cursor-relative.
+ * The bar under the cursor stays visually fixed as you zoom in/out,
+ * matching TradingView's scroll-wheel zoom behavior.
+ */
+function zoomHAtX(px, f) {
+  // Freeze Y scale to current visible range to prevent Y auto-fit shifts during horizontal zoom
+  if (psHalf === null && bars.length) {
+    const pr = calcPR();
+    psHalf = (pr.hi - pr.lo) / 2;
+    if (psCtr === null) psCtr = (pr.lo + pr.hi) / 2;
+  }
+  const nw = Math.max(MIN_BW, Math.min(MAX_BW, barW * f));
+  if (nw === barW) return;
+  const barAtPx = px / barW + leftBar - 0.5;
+  leftBar = barAtPx - px / nw + 0.5;
+  barW = nw;
+}
+
+/** Horizontal pan by dx canvas pixels — already pixel-exact. */
+function panH(dx) { leftBar -= dx / barW; }
+
+/**
+ * Vertical zoom. factor>1 = zoom in (taller price scale / less range shown).
+ * Anchors at the FIXED pane center (matches reference's centerY-anchored
+ * priceToY) — the price center (auto-fit or manually set) never shifts
+ * just because you zoomed.
+ */
+/**
+ * Vertical zoom. factor < 1 = zoom in (less price range visible).
+ * If called from auto mode (psHalf null), first freeze the current range
+ * so subsequent panning doesn't disturb the manually set Y scale.
+ */
+function zoomV(f) {
+  if (psHalf === null && bars.length) {
+    const pr = calcPR();
+    psHalf = (pr.hi - pr.lo) / 2;
+    if (psCtr === null) psCtr = (pr.lo + pr.hi) / 2;
+  }
+  psHalf = Math.max(1e-8, (psHalf ?? 1) * f);
+}
+
+/** Vertical pan — shifts the price center by dy canvas pixels worth of price. */
+function panV(dy) {
+  const pr = calcPR();
+  psCtr = (psCtr ?? (pr.lo + pr.hi) / 2) + dy * (pr.hi - pr.lo) / MH();
+}
+
+function gotoLatest() { leftBar = bars.length - CW() / barW + 5; resetPS(); }
+function resetPS()    { psf = 1.0; psCtr = null; psHalf = null; }
+function initCamera() { barW = Math.min(12, Math.max(2, CW() / 150)); gotoLatest(); }
+function shiftCam(prevLen) { const a = bars.length - prevLen; if (a > 0) leftBar += a; }
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// PRICE RANGE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function visRange() {
+  const L = Math.floor(leftBar), R = Math.ceil(leftBar + CW() / barW);
+  return { L: Math.max(0, Math.min(bars.length - 1, L)), R: Math.max(0, Math.min(bars.length - 1, R)) };
+}
+function calcPR() {
+  const { L, R } = visRange(); let lo = Infinity, hi = -Infinity;
+  for (let i = L; i <= R; i++) {
+    const x = bx(i); if (!bars[i] || x + barW / 2 < 0 || x - barW / 2 > CW()) continue;
+    if (bars[i].low < lo) lo = bars[i].low; if (bars[i].high > hi) hi = bars[i].high;
+  }
+  if (lo === Infinity) { const l = bars[bars.length - 1]; if (!l) return { lo: 0, hi: 1 }; lo = l.low * .999; hi = l.high * 1.001; }
+  const pad    = (hi - lo) * .06;
+  const center = psCtr  ?? ((lo + hi) / 2);
+  // psHalf: explicit lock from user pan/zoom. null = auto-compute from visible bars.
+  const half   = psHalf ?? ((hi - lo + pad * 2) / 2 * psf);
+  return { lo: center - half, hi: center + half };
+}
+function calcMV() { const { L, R } = visRange(); let m = 0; for (let i = L; i <= R; i++) if (bars[i]?.volume > m) m = bars[i].volume; return m || 1; }
+function p2y(p, lo, hi) { return PAD_T + (1 - (p - lo) / (hi - lo)) * (MH() - PAD_T - PAD_B); }
+function y2p(y, lo, hi) { return lo + (1 - (y - PAD_T) / (MH() - PAD_T - PAD_B)) * (hi - lo); }
+function v2y(v, mV)     { return VT() + (VH() - 2) * (1 - v / (mV * volMultiplier)); }
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// COLORS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const C = {
+  bg: '#10131a',
+  grid: '#1c2230',
+  axisArea: '#141722',
+  axisBorder: '#232736',
+  axisText: '#94a3b8',
+  bull: '#26a69a',
+  bear: '#ef5350',
+  neutral: '#8892a0',
+  volBull: 'rgba(38,166,154,.35)',
+  volBear: 'rgba(239,83,80,.35)',
+  cpLine: 'rgba(255,140,55,.85)',
+  cpBg: '#2a1a08',
+  cpText: '#ff8c37',
+  cpBorder: '#8c450a',
+  cdText: '#ff8c37',
+  cross: 'rgba(255,255,255,.45)',
+  dash: [2, 2],
+  xLbl: '#2a1a08',
+  xLblT: '#ff8c37',
+  startMark: '#3e475c'
+};
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// RENDER
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function render() {
+  if (!wWidth || !wHeight) return;
+  const W = CW(), H = CH(), MHv = MH();
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, wWidth, wHeight);
+  if (!bars.length) { ctx.font = '12px Consolas,monospace'; ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center'; ctx.fillText('Waiting for data…', W / 2, H / 2); return; }
+
+  const pr = calcPR(), mV = calcMV(), { L, R } = visRange();
+  drawGrid(pr, W, MHv);
+
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, MHv); ctx.clip();
+  // Draw VP profiles FIRST (behind candles) for M5+ TF when zoomed in enough
+  if (indicators.vp) {
+    const subIv = vpSubIv(tf);
+    if (subIv && barW >= VP_MIN_BW) {
+      const vpBars = vpCache.get(`${sym}:${subIv}`) || [];
+      if (vpBars.length) {
+        for (let i = L; i <= R; i++) {
+          const x = bx(i); if (x + barW / 2 < 0 || x - barW / 2 > W) continue;
+          drawCandleVP(bars[i], x, pr, vpBars);
+        }
+      }
+    }
+  }
+  if (indicators.hvn) {
+    try {
+      if (hvnDirty) computeHVN();
+      drawHVN(L, R, pr);
+    } catch (e) { console.warn('[HVN render error]', e); }
+  }
+  for (let i = L; i <= R; i++) {
+    const x = bx(i); if (x + barW / 2 < 0 || x - barW / 2 > W) continue;
+    drawCandle(bars[i], x, barW, pr); 
+  }
+  if (indicators.bubble) {
+    drawBubbles(L, R, pr);
+  }
+  if (indicators.ha) {
+    try { drawHeavyAbsorption(L, R, pr); }
+    catch (e) { console.warn('[HA render error]', e); }
+  }
+  // Draw technical analysis drawing objects (Line, Rect, Fibo, Path, Long/Short)
+  try {
+    drawAllObjects(pr, W, MHv);
+  } catch (e) { console.warn('[Draw render error]', e); }
+  if (bufState.reachedStart) {
+    const x0 = bx(0);
+    if (x0 >= -50 && x0 <= W + 50) {
+      ctx.strokeStyle = C.startMark; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(x0, PAD_T); ctx.lineTo(x0, MHv - PAD_B); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+
+  // Draw solid panel backgrounds to cover any wicks and draw borders
+  ctx.strokeStyle = '#232736'; ctx.lineWidth = 2;
+  if (indicators.volume) {
+    ctx.fillStyle = C.bg;
+    ctx.fillRect(0, VT(), W, VH());
+    ctx.beginPath(); ctx.moveTo(0, VT()); ctx.lineTo(W, VT()); ctx.stroke();
+    
+    // Clip volume drawing to inner volume panel area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, VT() + 1, W, VH() - 2);
+    ctx.clip();
+    for (let i = L; i <= R; i++) {
+      const x = bx(i); if (x + barW / 2 < 0 || x - barW / 2 > W) continue;
+      drawVol(bars[i], x, barW, mV);
+    }
+    ctx.restore();
+  }
+  if (indicators.cvd) {
+    ctx.fillStyle = C.bg;
+    ctx.fillRect(0, CVDT(), W, CVDH());
+    ctx.beginPath(); ctx.moveTo(0, CVDT()); ctx.lineTo(W, CVDT()); ctx.stroke();
+    
+    // Clip CVD drawing to inner CVD panel area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, CVDT() + 1, W, CVDH() - 2);
+    ctx.clip();
+    drawCVD(L, R, W);
+    ctx.restore();
+  }
+
+  // Draw indicators name watermarks & status check in the top-left corner of each active pane
+  ctx.save();
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.textAlign = 'left';
+
+  if (indicators.volume) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('VOLUME', 10, VT() + 14);
+  }
+
+  if (indicators.cvd) {
+    const EX_ABBR = {
+      bybit: 'BY', binance: 'BN', okx: 'OK', mexc: 'MX',
+      bingx: 'BX', bitstamp: 'BS', bitunix: 'BU', coinbase: 'CB'
+    };
+
+    let curX = 10;
+    
+    // 1. Draw Main Title label
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('AGG. CVD SPOT', curX, CVDT() + 14);
+    curX += ctx.measureText('AGG. CVD SPOT').width + 8;
+    
+    // 2. Draw exchange statuses from left to right
+    if (cvdExchangeStatus && cvdExchangeStatus.length) {
+      // Draw vertical separator divider
+      ctx.fillStyle = '#3e465e';
+      ctx.fillText('|', curX, CVDT() + 14);
+      curX += ctx.measureText('|').width + 8;
+      
+      for (const ex of cvdExchangeStatus) {
+        const dotColor = ex.ok ? '#26a69a' : '#ef5350';
+        const label = (EX_ABBR[ex.id] || ex.id.substring(0,2).toUpperCase()) + ':';
+        
+        // Draw Exchange Abbreviation Code
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(label, curX, CVDT() + 14);
+        curX += ctx.measureText(label).width + 3;
+        
+        // Draw Status Dot
+        ctx.fillStyle = dotColor;
+        ctx.fillText('â—', curX, CVDT() + 14);
+        curX += ctx.measureText('â—').width + 8;
+      }
+    }
+  }
+  ctx.restore();
+  
+  drawPAxis(pr, W, MHv); drawTAxis(L, R, W, H);
+  drawCurPrice(bars[bars.length - 1]?.close, pr, W);
+
+  if (mx >= 0 && mx < W && my >= 0 && my < H) drawCross(pr, W, H, MHv);
+  else showOHLCV(bars[bars.length - 1]);
+
+  maybeBufferMore();
+  scheduleVpFetch(); // request VP sub-bar data for visible range if needed
+}
+
+function drawGrid(pr, W, MHv) { const s = niceStep(pr.hi - pr.lo, 8); let p = Math.ceil(pr.lo / s) * s; ctx.strokeStyle = C.grid; ctx.lineWidth = 1; while (p <= pr.hi) { const y = p2y(p, pr.lo, pr.hi); if (y >= PAD_T && y <= MHv - PAD_B) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } p += s; } }
+function drawCandle(b, x, bw, pr) {
+  const oy = p2y(b.open, pr.lo, pr.hi), cy = p2y(b.close, pr.lo, pr.hi),
+        hy = p2y(b.high, pr.lo, pr.hi), ly = p2y(b.low,  pr.lo, pr.hi);
+  const col = b.close > b.open ? C.bull : b.close < b.open ? C.bear : C.neutral;
+  // Body width: 48% of slot — leaves right half for VP profile
+  const bW = Math.max(1, bw * 0.48);
+  const bT = Math.min(oy, cy), bH = Math.max(1, Math.abs(cy - oy));
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(1, bw < 5 ? 0.8 : 1);
+  ctx.beginPath(); ctx.moveTo(x, hy); ctx.lineTo(x, ly); ctx.stroke();
+  ctx.fillStyle = col;
+  bH < 1.5 ? ctx.fillRect(x - bW / 2, bT - 0.75, bW, 1.5)
+            : ctx.fillRect(x - bW / 2, bT, bW, bH);
+}
+function drawVol(b, x, bw, mV) {
+  if (!b?.volume) return;
+  const top = v2y(b.volume, mV), bot = VT() + VH() - 2;
+  const w = Math.max(1, bw * 0.48);
+  ctx.fillStyle = b.close >= b.open ? C.volBull : C.volBear;
+  ctx.fillRect(x - w / 2, top, w, Math.max(1, bot - top));
+}
+
+function drawCVD(L, R, W) {
+  if (!cvdData || !cvdData.length) return;
+
+  const cvdMap = new Map();
+  cvdData.forEach(item => cvdMap.set(item.time, item));
+
+  // Compute live CVD delta for the current incomplete bar in real-time
+  const lastB = bars[bars.length - 1];
+  if (lastB) {
+    const prevB = bars[bars.length - 2];
+    const prevCvdObj = prevB ? cvdMap.get(prevB.time) : null;
+    const baseCvd = prevCvdObj ? prevCvdObj.cvd : 0;
+    
+    const h = lastB.high, l = lastB.low, c = lastB.close, v = lastB.volume;
+    let liveDelta = 0;
+    if (h > l && v > 0) {
+      liveDelta = v * (((c - l) - (h - c)) / (h - l));
+    }
+    cvdMap.set(lastB.time, {
+      time: lastB.time,
+      delta: liveDelta,
+      cvd: baseCvd + liveDelta
+    });
+  }
+
+  // Determine local min/max of estimated CVD OHLC in visible window for precise Y-axis scaling
+  let minVal = Infinity;
+  let maxVal = -Infinity;
+  
+  for (let i = L; i <= R; i++) {
+    if (bars[i]) {
+      const cur = cvdMap.get(bars[i].time);
+      if (cur) {
+        const prev = i > 0 ? cvdMap.get(bars[i - 1].time) : cur;
+        const prevCvd = prev ? prev.cvd : cur.cvd;
+        const curCvd = cur.cvd;
+        const delta = curCvd - prevCvd;
+        const absDelta = Math.abs(delta);
+        
+        // Estimate wicks based on price candle wicks ratio
+        const rp = bars[i].high - bars[i].low;
+        let wUpper = 0, wLower = 0;
+        if (rp > 0) {
+          wUpper = (bars[i].high - Math.max(bars[i].open, bars[i].close)) / rp;
+          wLower = (Math.min(bars[i].open, bars[i].close) - bars[i].low) / rp;
+        }
+        
+        const cvdOpen = prevCvd;
+        const cvdClose = curCvd;
+        const cvdHigh = Math.max(cvdOpen, cvdClose) + wUpper * absDelta;
+        const cvdLow = Math.min(cvdOpen, cvdClose) - wLower * absDelta;
+        
+        if (cvdLow < minVal) minVal = cvdLow;
+        if (cvdHigh > maxVal) maxVal = cvdHigh;
+      }
+    }
+  }
+
+  if (minVal === Infinity || maxVal === -Infinity) return;
+
+  const top = CVDT() + 4;
+  const bot = CVDT() + CVDH() - 4;
+
+  const getCvdY = (val) => {
+    if (maxVal === minVal) return (top + bot) / 2;
+    const center = (minVal + maxVal) / 2;
+    const halfSpan = ((maxVal - minVal) / 2) * cvdMultiplier;
+    const lo = center - halfSpan;
+    const hi = center + halfSpan;
+    if (hi === lo) return (top + bot) / 2;
+    return bot - ((val - lo) / (hi - lo)) * (bot - top);
+  };
+
+  // Render CVD candles
+  for (let i = L; i <= R; i++) {
+    if (bars[i]) {
+      const x = bx(i);
+      const cur = cvdMap.get(bars[i].time);
+      if (cur) {
+        const prev = i > 0 ? cvdMap.get(bars[i - 1].time) : cur;
+        const prevCvd = prev ? prev.cvd : cur.cvd;
+        const curCvd = cur.cvd;
+        const delta = curCvd - prevCvd;
+        const absDelta = Math.abs(delta);
+        
+        const rp = bars[i].high - bars[i].low;
+        let wUpper = 0, wLower = 0;
+        if (rp > 0) {
+          wUpper = (bars[i].high - Math.max(bars[i].open, bars[i].close)) / rp;
+          wLower = (Math.min(bars[i].open, bars[i].close) - bars[i].low) / rp;
+        }
+        
+        const cvdOpen = prevCvd;
+        const cvdClose = curCvd;
+        const cvdHigh = Math.max(cvdOpen, cvdClose) + wUpper * absDelta;
+        const cvdLow = Math.min(cvdOpen, cvdClose) - wLower * absDelta;
+        
+        const yOpen = getCvdY(cvdOpen);
+        const yClose = getCvdY(cvdClose);
+        const yHigh = getCvdY(cvdHigh);
+        const yLow = getCvdY(cvdLow);
+        
+        const isBullish = cvdClose >= cvdOpen;
+        const col = isBullish ? '#26a69a' : '#ef5350';
+        
+        // Detect Divergence (opposing directions of price candle vs CVD candle)
+        const isPriceBull = bars[i].close > bars[i].open;
+        const isPriceBear = bars[i].close < bars[i].open;
+        const isCvdBull = cvdClose > cvdOpen;
+        const isCvdBear = cvdClose < cvdOpen;
+        const isDivergent = (isPriceBull && isCvdBear) || (isPriceBear && isCvdBull);
+        
+        // Draw wick
+        ctx.strokeStyle = col;
+        ctx.lineWidth = Math.max(1, barW < 5 ? 0.8 : 1);
+        ctx.beginPath();
+        ctx.moveTo(x, yHigh);
+        ctx.lineTo(x, yLow);
+        ctx.stroke();
+        
+        // Draw body
+        const bW = Math.max(1, barW * 0.48);
+        const bT = Math.min(yOpen, yClose);
+        const bH = Math.max(1, Math.abs(yClose - yOpen));
+        
+        ctx.fillStyle = col;
+        if (bH < 1.5) {
+          ctx.fillRect(x - bW / 2, bT - 0.75, bW, 1.5);
+        } else {
+          ctx.fillRect(x - bW / 2, bT, bW, bH);
+        }
+        
+        // Draw yellow outline around body if divergence is active
+        if (isDivergent) {
+          ctx.strokeStyle = '#ffd700'; // gold yellow
+          ctx.lineWidth = 1.5;
+          if (bH < 1.5) {
+            ctx.strokeRect(x - bW / 2, bT - 0.75, bW, 1.5);
+          } else {
+            ctx.strokeRect(x - bW / 2, bT, bW, bH);
+          }
+        }
+      }
+    }
+  }
+}
+
+function getBucketSize(price) {
+  if (price >= 10000)   return 10;
+  if (price >= 1000)    return 1;
+  if (price >= 100)     return 0.1;
+  if (price >= 10)      return 0.01;
+  if (price >= 1)       return 0.001;
+  if (price >= 0.01)    return 0.00001;
+  if (price >= 0.0001)  return 0.0000001;
+  return 0.000000001;
+}
+
+// Format token amount for bubble labels: 1-999 as number, 1000+ as 1K, 1M, etc.
+function fmtTokenShort(v) {
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  if (v < 10) return v.toFixed(1);
+  return Math.round(v).toString();
+}
+
+function drawBubbles(L, R, pr) {
+  const minTok = bubbleConfig.minToken;
+  const mult = bubbleConfig.multiplier;
+
+  // X-axis zoom: barW relative to reference
+  const REF_BW = 10;
+  const zoomX = barW / REF_BW;
+
+  // Y-axis zoom: compare natural price range of visible bars to actual displayed range
+  let natLo = Infinity, natHi = -Infinity;
+  for (let i = L; i <= R; i++) {
+    if (!bars[i]) continue;
+    if (bars[i].low < natLo) natLo = bars[i].low;
+    if (bars[i].high > natHi) natHi = bars[i].high;
+  }
+  const natRange = natHi > natLo ? (natHi - natLo) : 1;
+  const dispRange = pr.hi - pr.lo || 1;
+  const zoomY = natRange / dispRange;  // >1 when Y zoomed in, <1 when zoomed out
+
+  // Combine X and Y zoom using geometric mean for uniform circle scaling
+  const zoomScale = Math.sqrt(Math.sqrt(zoomX) * Math.sqrt(zoomY));
+
+  const BASE_MIN_R = 4;   // base minimum radius (px)
+  const BASE_MAX_R = BASE_MIN_R * 5;  // base max = 5x min = 20px
+  const minR = BASE_MIN_R * mult * zoomScale;
+  const maxR = BASE_MAX_R * mult * zoomScale;
+  
+  let maxV = 0;
+  const candleBubbles = new Map();
+
+  // Scan visible window: find the single largest level per candle that passes the token threshold
+  for (let i = L; i <= R; i++) {
+    const b = bars[i];
+    if (!b) continue;
+    const levels = tradeAgg[b.time];
+    if (!levels) continue;
+    
+    let bestLevel = null;
+    let maxLevelVol = 0;
+    
+    for (const pStr in levels) {
+      const price = parseFloat(pStr);
+      const lv = levels[pStr];
+      const buyVal = parseFloat(lv.buy || 0);
+      const sellVal = parseFloat(lv.sell || 0);
+      const tot = buyVal + sellVal;
+      
+      // Filter by minimum token/coin amount
+      if (minTok > 0 && tot < minTok) continue;
+      
+      if (tot > maxLevelVol) {
+        maxLevelVol = tot;
+        bestLevel = { price, tot, buy: buyVal, sell: sellVal };
+      }
+    }
+    
+    if (bestLevel) {
+      candleBubbles.set(b.time, bestLevel);
+      if (bestLevel.tot > maxV) maxV = bestLevel.tot;
+    }
+  }
+  
+  if (maxV <= 0) return;
+
+  // Draw the single bubble per candle
+  for (let i = L; i <= R; i++) {
+    const b = bars[i];
+    if (!b) continue;
+    const x = bx(i);
+    
+    const bubble = candleBubbles.get(b.time);
+    if (!bubble) continue;
+
+    const y = p2y(bubble.price, pr.lo, pr.hi);
+    if (y < PAD_T || y > MH() - PAD_B) continue;
+
+    // Size based on absolute token amount relative to min threshold
+    const capTok = minTok > 0 ? minTok * 5 : maxV;  // cap at 5× minimum
+    let t;
+    if (minTok > 0) {
+      // Absolute scaling: 0 at minTok, 1 at 5×minTok
+      t = Math.min(1, (bubble.tot - minTok) / (capTok - minTok));
+    } else {
+      // No minimum set: relative sqrt scaling within visible window
+      t = Math.sqrt(bubble.tot / maxV);
+    }
+    let radius = minR + t * (maxR - minR);
+    const isCapped = minTok > 0 ? bubble.tot > capTok : radius >= maxR;
+    radius = Math.min(radius, maxR);
+
+    const buyVol = bubble.buy;
+    const sellVol = bubble.sell;
+    const isNetBuy = buyVol > sellVol;
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = isNetBuy ? 'rgba(38, 166, 154, 0.55)' : 'rgba(239, 83, 80, 0.55)';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = isNetBuy ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
+    ctx.stroke();
+
+    // Draw value label only when order size reaches 5× minimum
+    if (isCapped && radius >= 8) {
+      ctx.save();
+      const fontSize = Math.max(7, Math.min(10, radius * 0.55));
+      ctx.font = `bold ${fontSize}px Consolas, monospace`;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = 0.95;
+      ctx.fillText(fmtTokenShort(bubble.tot), x, y);
+      ctx.restore();
+    }
+  }
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// HEAVY ABSORPTION — fetch & draw (Image 1)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+async function fetchHA() {
+  try {
+    const r = await fetch('/api/heavy-absorption');
+    const j = await r.json();
+    if (j.ok && j.symbol === sym) haData = j.data || [];
+  } catch (e) { console.warn('[HA] fetch error:', e); }
+}
+
+// Collects all Heavy Absorption points (combines real-time WS prints + statistical historical prints)
+function getHeavyAbsorptionDetections(L, R) {
+  const detections = [];
+  if (!bars || bars.length < 15) return detections;
+
+  const HA_LOOKBACK = 100;
+  const HA_STDEV_MULT = 2.0;
+
+  // 1. Map real-time WS detections from server
+  const serverTimes = new Set();
+  if (haData && haData.length) {
+    for (const d of haData) {
+      serverTimes.add(d.barTime);
+      detections.push(d);
+    }
+  }
+
+  // 2. Statistical candle-level absorption across chart history (matching Image 1)
+  const vols = bars.map(b => b.volume);
+  const start = Math.max(0, L - 10);
+  const end = Math.min(bars.length - 1, R + 10);
+
+  for (let i = Math.max(15, start); i <= end; i++) {
+    const b = bars[i];
+    if (serverTimes.has(b.time)) continue; // avoid duplicates with server data
+
+    const wStart = Math.max(0, i - HA_LOOKBACK);
+    const win = vols.slice(wStart, i);
+    if (win.length < 10) continue;
+
+    const mean = win.reduce((s, v) => s + v, 0) / win.length;
+    const variance = win.reduce((s, v) => s + (v - mean) ** 2, 0) / win.length;
+    const stdev = Math.sqrt(variance);
+    const threshold = mean + HA_STDEV_MULT * stdev;
+
+    if (b.volume >= threshold && b.volume > 0) {
+      const span = (b.high - b.low) || 1e-12;
+      const upperWick = b.high - Math.max(b.open, b.close);
+      const lowerWick = Math.min(b.open, b.close) - b.low;
+
+      // Bull / Buy absorption at high wick (Green circle placed at candle high, like Image 1)
+      if (upperWick / span >= 0.22 || (b.close < b.open && upperWick >= lowerWick)) {
+        detections.push({
+          barTime: b.time,
+          price: b.high,
+          volume: b.volume,
+          side: 'Buy'
+        });
+      }
+      // Bear / Sell absorption at low wick (Red circle placed at candle low, like Image 1)
+      else if (lowerWick / span >= 0.22 || (b.close > b.open && lowerWick >= upperWick)) {
+        detections.push({
+          barTime: b.time,
+          price: b.low,
+          volume: b.volume,
+          side: 'Sell'
+        });
+      }
+    }
+  }
+
+  return detections;
+}
+
+function drawHeavyAbsorption(L, R, pr) {
+  if (!bars.length) return;
+
+  const allDetections = getHeavyAbsorptionDetections(L, R);
+  if (!allDetections.length) return;
+
+  // Zoom scaling (geometric mean of X and Y zoom)
+  const REF_BW = 10;
+  const zoomX = barW / REF_BW;
+  let natLo = Infinity, natHi = -Infinity;
+  for (let i = L; i <= R; i++) {
+    if (!bars[i]) continue;
+    if (bars[i].low < natLo) natLo = bars[i].low;
+    if (bars[i].high > natHi) natHi = bars[i].high;
+  }
+  const natRange = natHi > natLo ? (natHi - natLo) : 1;
+  const dispRange = pr.hi - pr.lo || 1;
+  const zoomY = natRange / dispRange;
+  const zoomScale = Math.sqrt(Math.sqrt(zoomX) * Math.sqrt(zoomY));
+
+  const MIN_R = 10 * zoomScale;
+  const MAX_R = 24 * zoomScale;
+
+  // Build time to index lookup
+  const timeToIdx = new Map();
+  for (let i = L; i <= R; i++) {
+    if (bars[i]) timeToIdx.set(bars[i].time, i);
+  }
+
+  const visible = [];
+  let maxVol = 0;
+  for (const d of allDetections) {
+    const idx = timeToIdx.get(d.barTime);
+    if (idx === undefined) continue;
+    visible.push({ ...d, idx });
+    if (d.volume > maxVol) maxVol = d.volume;
+  }
+  if (!visible.length || maxVol <= 0) return;
+
+  for (const d of visible) {
+    const x = bx(d.idx);
+    const y = p2y(d.price, pr.lo, pr.hi);
+    if (y < PAD_T - 20 || y > MH() - PAD_B + 20) continue;
+
+    const ratio = Math.min(1.0, Math.sqrt(d.volume / maxVol));
+    const radius = Math.max(8, MIN_R + ratio * (MAX_R - MIN_R));
+    const isBuy = d.side === 'Buy';
+
+    // Circle background fill (Image 1: translucent green or red)
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = isBuy ? 'rgba(38, 166, 154, 0.45)' : 'rgba(239, 83, 80, 0.45)';
+    ctx.fill();
+
+    // Circle stroke border (Image 1: solid 1.5px border)
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isBuy ? '#26a69a' : '#ef5350';
+    ctx.stroke();
+
+    // Exact volume label inside circle (Image 1: white text like 405, 550, 760)
+    if (radius >= 7) {
+      ctx.save();
+      const fontSize = Math.max(7, Math.min(11, radius * 0.55));
+      ctx.font = `bold ${fontSize}px Consolas, monospace`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(fmtTokenShort(d.volume), x, y);
+      ctx.restore();
+    }
+  }
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// HVN PROFILE — compute & draw
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const HVN_ANCHOR_SEC = { '15': 900, '30': 1800, '60': 3600, '240': 14400, 'D': 86400, 'W': 604800 };
+
+function computeHVN() {
+  hvnZones = [];
+  hvnPeriods = [];
+  if (!bars || !bars.length) { hvnDirty = false; return; }
+
+  const anchorSec = HVN_ANCHOR_SEC[hvnConfig.anchor] || 86400;
+
+  // ── Determine mintick from actual decimal precision in bar data ──
+  // Instead of using a price-tier heuristic (which breaks for many pairs),
+  // we detect the actual decimal places from OHLC values in the data.
+  let maxDec = 0;
+  const sampleBars = bars.slice(-100);
+  for (const b of sampleBars) {
+    for (const v of [b.open, b.high, b.low, b.close]) {
+      const s = v.toString();
+      const dot = s.indexOf('.');
+      if (dot !== -1) { maxDec = Math.max(maxDec, s.length - dot - 1); }
+    }
+  }
+  const mintick = maxDec > 0 ? Math.pow(10, -maxDec) : 0.1;
+
+  const rowHeight = (hvnConfig.rowTicks || 20) * mintick;
+  if (rowHeight <= 0) return;
+
+  // Group bars into anchor periods
+  const periods = new Map(); // anchorTime → [barIndices]
+  for (let i = 0; i < bars.length; i++) {
+    const aTime = Math.floor(bars[i].time / anchorSec) * anchorSec;
+    if (!periods.has(aTime)) periods.set(aTime, []);
+    periods.get(aTime).push(i);
+  }
+
+  // Get current period time (latest bar's period — still open, skip it)
+  const lastBar = bars[bars.length - 1];
+  const curPeriod = Math.floor(lastBar.time / anchorSec) * anchorSec;
+
+  // Process each COMPLETED period
+  for (const [pTime, barIdxs] of periods) {
+    if (pTime === curPeriod) continue; // Skip current (open) period
+
+    // Build volume profile for this period
+    const volMap = new Map(); // binIndex → volume
+    const buyVolMap = new Map(); // binIndex → buyVolume
+    let maxBinVol = 0;
+    let totalPeriodVol = 0;
+
+    for (const bi of barIdxs) {
+      const b = bars[bi];
+      const topBin = Math.floor(b.high / rowHeight);
+      const botBin = Math.floor(b.low / rowHeight);
+      const nBins = topBin - botBin + 1;
+      const bSpan = (b.high - b.low) || 1e-12;
+      const isUp = b.close >= b.open;
+      const buyFrac = isUp ? Math.min(0.9, Math.max(0.3, (b.close - b.low) / bSpan))
+                           : Math.min(0.7, Math.max(0.1, (b.close - b.low) / bSpan));
+
+      if (nBins > 200) {
+        const singleBin = Math.floor(b.close / rowHeight);
+        const cur = volMap.get(singleBin) || 0;
+        const nv = cur + b.volume;
+        volMap.set(singleBin, nv);
+        buyVolMap.set(singleBin, (buyVolMap.get(singleBin) || 0) + b.volume * buyFrac);
+        if (nv > maxBinVol) maxBinVol = nv;
+        totalPeriodVol += b.volume;
+      } else {
+        const volPerBin = b.volume / nBins;
+        const buyPerBin = (b.volume * buyFrac) / nBins;
+        for (let bin = botBin; bin <= topBin; bin++) {
+          const cur = volMap.get(bin) || 0;
+          const nv = cur + volPerBin;
+          volMap.set(bin, nv);
+          buyVolMap.set(bin, (buyVolMap.get(bin) || 0) + buyPerBin);
+          if (nv > maxBinVol) maxBinVol = nv;
+        }
+        totalPeriodVol += b.volume;
+      }
+    }
+
+    if (maxBinVol <= 0) continue;
+
+    const startIdx = barIdxs[barIdxs.length - 1]; // last bar of the period
+    const grace = hvnConfig.graceBars ?? 2;
+
+    // ── Cache histogram data for vertical profile rendering ──
+    hvnPeriods.push({
+      startIdx,
+      barIdxs,
+      volMap,
+      maxBinVol,
+      rowHeight
+    });
+
+    // Find qualified HVN bins (≥ threshold% of max)
+    const threshVol = ((hvnConfig.threshold || 70) / 100) * maxBinVol;
+    const qualBins = [];
+    for (const [bin, vol] of volMap) {
+      if (vol >= threshVol) qualBins.push(bin);
+    }
+    qualBins.sort((a, b) => a - b);
+
+    if (!qualBins.length) continue;
+
+    // Find the POC bin (highest volume bin overall)
+    let globalPocBin = qualBins[0], globalPocVol = volMap.get(qualBins[0]);
+    for (const bin of qualBins) {
+      const v = volMap.get(bin);
+      if (v > globalPocVol) { globalPocVol = v; globalPocBin = bin; }
+    }
+
+    // Cluster nearby qualified bins
+    const clusters = [];
+    let groupStart = qualBins[0], groupEnd = qualBins[0], groupCount = 1;
+    let pocBin = qualBins[0], pocVol = volMap.get(qualBins[0]);
+
+    for (let i = 1; i < qualBins.length; i++) {
+      const k = qualBins[i];
+      if (k - groupEnd <= (hvnConfig.gapTol || 1) + 1) {
+        groupEnd = k;
+        groupCount++;
+        const v = volMap.get(k);
+        if (v > pocVol) { pocVol = v; pocBin = k; }
+      } else {
+        if (groupCount >= (hvnConfig.minCluster || 1)) {
+          clusters.push({ bot: groupStart, top: groupEnd, poc: pocBin });
+        }
+        groupStart = k; groupEnd = k; groupCount = 1;
+        pocBin = k; pocVol = volMap.get(k);
+      }
+    }
+    if (groupCount >= (hvnConfig.minCluster || 1)) {
+      clusters.push({ bot: groupStart, top: groupEnd, poc: pocBin });
+    }
+
+    // Create zones from clusters
+    for (const c of clusters) {
+      const zoneTop = (c.top + 1) * rowHeight;
+      const zoneBot = c.bot * rowHeight;
+      const zonePoc = (c.poc + 0.5) * rowHeight;
+
+      // Determine if this cluster contains the global POC bin → amber/orange
+      // Otherwise → blue (secondary HVN)
+      const isPOC = (globalPocBin >= c.bot && globalPocBin <= c.top);
+
+      // Check if price has touched this zone after grace period
+      let touched = false;
+      let touchedAtIdx = null;
+      for (let j = startIdx + grace; j < bars.length; j++) {
+        if (bars[j].low <= zoneTop && bars[j].high >= zoneBot) {
+          touched = true;
+          touchedAtIdx = j;
+          break;
+        }
+      }
+
+      let cTotVol = 0;
+      let cBuyVol = 0;
+      for (let bin = c.bot; bin <= c.top; bin++) {
+        cTotVol += volMap.get(bin) || 0;
+        cBuyVol += buyVolMap.get(bin) || 0;
+      }
+      const buyPct = cTotVol > 0 ? Math.round((cBuyVol / cTotVol) * 100) : 50;
+
+      // Extension logic:
+      // - Untouched zone → extends to the rightmost visible bar (bars.length - 1)
+      // - Touched zone → extends to the bar where it was first touched
+      const dynamicEnd = touched ? touchedAtIdx : (bars.length - 1 + 5);
+
+      hvnZones.push({
+        top: zoneTop,
+        bottom: zoneBot,
+        poc: zonePoc,
+        startIdx,
+        endIdx: dynamicEnd,
+        touched,
+        isPOC,
+        volume: cTotVol,
+        pct: buyPct
+      });
+    }
+  }
+
+  // Cap at maxZones (keep newest)
+  const maxZ = hvnConfig.maxZones || 15;
+  while (hvnZones.length > maxZ) hvnZones.shift();
+  hvnDirty = false;
+}
+
+function drawHVN(L, R, pr) {
+  if (!bars || !bars.length) return;
+  const W = CW();
+
+  // ── Draw profile histogram silhouettes (vertical bars) if enabled ──
+  if (hvnConfig.showProfile && hvnPeriods.length) {
+    for (const pd of hvnPeriods) {
+      if (pd.startIdx > R) continue;
+      const profW = 40; // pixel width for the profile silhouette
+      const x0 = bx(pd.startIdx);
+      if (x0 + profW < 0) continue;
+
+      for (const [bin, vol] of pd.volMap) {
+        const binTop = (bin + 1) * pd.rowHeight;
+        const binBot = bin * pd.rowHeight;
+        const y1 = p2y(binTop, pr.lo, pr.hi);
+        const y2 = p2y(binBot, pr.lo, pr.hi);
+        const yt = Math.max(PAD_T, Math.min(y1, y2));
+        const yb = Math.min(MH() - PAD_B, Math.max(y1, y2));
+        const bh = yb - yt;
+        if (bh < 0.5) continue;
+
+        const ratio = vol / pd.maxBinVol;
+        const barW = ratio * profW;
+        ctx.fillStyle = `rgba(100, 180, 255, ${0.08 + ratio * 0.15})`;
+        ctx.fillRect(x0, yt, barW, bh);
+      }
+    }
+  }
+
+  // ── Draw HVN zone boxes ──
+  if (!hvnZones.length) return;
+
+  for (const z of hvnZones) {
+    if (z.startIdx > R) continue;
+
+    const y1 = p2y(z.top, pr.lo, pr.hi);
+    const y2 = p2y(z.bottom, pr.lo, pr.hi);
+    if (y1 > MH() - PAD_B && y2 > MH() - PAD_B) continue;
+    if (y1 < PAD_T && y2 < PAD_T) continue;
+
+    const x1 = Math.max(0, bx(z.startIdx));
+    // For untouched zones, extend to endIdx (5 bars past last candle)
+    // For touched zones, extend to the touch point
+    const x2 = Math.min(W, bx(z.endIdx));
+    const yt = Math.max(PAD_T, Math.min(y1, y2));
+    const yb = Math.min(MH() - PAD_B, Math.max(y1, y2));
+    const h = yb - yt;
+    if (h < 1 || x2 <= x1) continue;
+
+    // Color: isPOC → amber/orange, secondary → blue
+    // Touched zones become grey
+    if (z.touched) {
+      ctx.fillStyle = 'rgba(128, 128, 128, 0.12)';
+      ctx.strokeStyle = 'rgba(128, 128, 128, 0.25)';
+    } else if (z.isPOC) {
+      ctx.fillStyle = 'rgba(230, 150, 20, 0.22)';
+      ctx.strokeStyle = 'rgba(230, 150, 20, 0.55)';
+    } else {
+      ctx.fillStyle = 'rgba(66, 133, 244, 0.18)';
+      ctx.strokeStyle = 'rgba(66, 133, 244, 0.45)';
+    }
+    ctx.fillRect(x1, yt, x2 - x1, h);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x1, yt, x2 - x1, h);
+
+    // POC line (dashed orange)
+    if (hvnConfig.showPOC) {
+      const yPoc = p2y(z.poc, pr.lo, pr.hi);
+      if (yPoc >= PAD_T && yPoc <= MH() - PAD_B) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = z.touched ? 'rgba(255, 165, 0, 0.30)' : 'rgba(255, 165, 0, 0.75)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(x1, yPoc);
+        ctx.lineTo(x2, yPoc);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
+    // Label 2 Angka di Paling Kanan Box ([Volume] | [Percent]%)
+    // Labels always sit at the right edge of the box (x2 - 5px)
+    if (hvnConfig.showLabels !== false && h >= 7) {
+      const rx = Math.min(x2, W);
+      const boxW = rx - x1;
+      if (boxW >= 28) {
+        ctx.save();
+        const midY = (yt + yb) / 2;
+        const fontSize = Math.max(7.5, Math.min(10, h * 0.7));
+        ctx.font = `bold ${fontSize}px Consolas, monospace`;
+        ctx.textBaseline = 'middle';
+
+        const volStr = fmtTokenShort(z.volume);
+        const hasPct = (z.pct != null) && boxW >= 65;
+
+        if (hasPct) {
+          const pctStr = `${z.pct}%`;
+          const sepStr = ' | ';
+          const pctW = ctx.measureText(pctStr).width;
+          const sepW = ctx.measureText(sepStr).width;
+          const volW = ctx.measureText(volStr).width;
+          const totW = volW + sepW + pctW;
+
+          if (boxW >= totW + 8) {
+            let curRx = rx - 5;
+            ctx.textAlign = 'right';
+            ctx.fillStyle = z.pct >= 50 ? '#26a69a' : '#ef5350';
+            ctx.fillText(pctStr, curRx, midY);
+            curRx -= pctW;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.fillText(sepStr, curRx, midY);
+            curRx -= sepW;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(volStr, curRx, midY);
+          } else {
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(volStr, rx - 5, midY);
+          }
+        } else {
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(volStr, rx - 5, midY);
+        }
+        ctx.restore();
+      }
+    }
+  }
+}
+
+/**
+ * Per-candle Volume Profile.
+ * Draws horizontal bars to the RIGHT of the candle body, using the gap
+ * between the candle body (48% of barW) and the right edge of the slot.
+ * Extends up to VP_MAX_FRAC * barW from the candle CENTER so profiles
+ * of adjacent candles stay visually separate.
+ * POC (Point of Control = highest-volume bin) is drawn in gold.
+ */
+function drawCandleVP(bar, x, pr, subBars) {
+  const openSec  = bar.time;
+  const closeSec = bar.time + tfSec;
+  const range    = bar.high - bar.low;
+  if (range <= 0) return;
+
+  // Binary-search: find first sub-bar at or after openSec
+  let lo = 0, hi = subBars.length - 1, startIdx = subBars.length;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (subBars[mid].time < openSec) lo = mid + 1;
+    else { startIdx = mid; hi = mid - 1; }
+  }
+  if (startIdx >= subBars.length) return;
+
+  // Accumulate volume into price buckets
+  const binSz = range / VP_BINS;
+  const vols  = new Float64Array(VP_BINS);
+  for (let k = startIdx; k < subBars.length; k++) {
+    const sb = subBars[k];
+    if (sb.time >= closeSec) break;
+    const sbSpan = (sb.high - sb.low) || 1e-12;
+    for (let bi = 0; bi < VP_BINS; bi++) {
+      const binLo = bar.low + bi * binSz;
+      const binHi = binLo + binSz;
+      const ov = Math.max(0, Math.min(sb.high, binHi) - Math.max(sb.low, binLo));
+      if (ov > 0) vols[bi] += sb.volume * (ov / sbSpan);
+    }
+  }
+
+  const maxVol = Math.max(...vols);
+  if (maxVol === 0) return;
+
+  const pocBin  = vols.indexOf(maxVol);
+  const isBull  = bar.close >= bar.open;
+
+  // VP starts at the RIGHT edge of the candle body (body = 48% of barW)
+  // and extends to the right, capped at VP_MAX_FRAC * barW from bar center.
+  const bodyHalfW = barW * 0.24 + 1;  // half of 48% body + 1px gap
+  const vpStart   = x + bodyHalfW;    // left edge of VP area
+  const vpMaxW    = barW * VP_MAX_FRAC - bodyHalfW; // available width for VP
+  if (vpMaxW < 2) return;
+
+  ctx.save();
+  for (let bi = 0; bi < VP_BINS; bi++) {
+    if (vols[bi] === 0) continue;
+    const pLo = bar.low + bi * binSz;
+    const pHi = pLo + binSz;
+    const y1  = p2y(pHi, pr.lo, pr.hi);
+    const y2  = p2y(pLo, pr.lo, pr.hi);
+    const bh  = Math.max(1, y2 - y1 - 0.5);
+    const bw  = (vols[bi] / maxVol) * vpMaxW;
+    if (bi === pocBin) {
+      ctx.fillStyle = 'rgba(255,200,50,0.85)'; // POC: gold
+    } else {
+      ctx.fillStyle = isBull
+        ? 'rgba(38,166,154,0.40)'
+        : 'rgba(239,83,80,0.40)';
+    }
+    ctx.fillRect(vpStart, y1, bw, bh);
+  }
+  ctx.restore();
+}
+
+function drawPAxis(pr, W, MHv) {
+  ctx.fillStyle = C.axisArea;
+  ctx.fillRect(W, 0, PA_W, wHeight);
+  ctx.strokeStyle = C.axisBorder;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W, 0);
+  ctx.lineTo(W, wHeight);
+  ctx.stroke();
+
+  ctx.font = '10px Consolas,monospace';
+  ctx.textAlign = 'left';
+
+  // 1. Main Price Axis
+  const s = niceStep(pr.hi - pr.lo, 8);
+  let p = Math.ceil(pr.lo / s) * s;
+  while (p <= pr.hi) {
+    const y = p2y(p, pr.lo, pr.hi);
+    if (y >= PAD_T && y <= MHv - PAD_B) {
+      ctx.strokeStyle = C.axisBorder;
+      ctx.beginPath();
+      ctx.moveTo(W, y);
+      ctx.lineTo(W + 3, y);
+      ctx.stroke();
+      ctx.fillStyle = C.axisText;
+      ctx.fillText(fmtP(p), W + 6, y + 3.5);
+    }
+    p += s;
+  }
+
+  // 2. Volume Axis Scale
+  if (indicators.volume) {
+    const mV = calcMV();
+    const yTop = VT() + 4;
+    const yBot = VT() + VH() - 4;
+    ctx.strokeStyle = C.axisBorder;
+    ctx.beginPath();
+    ctx.moveTo(W, yTop); ctx.lineTo(W + 3, yTop);
+    ctx.moveTo(W, yBot); ctx.lineTo(W + 3, yBot);
+    ctx.stroke();
+    ctx.fillStyle = C.axisText;
+    ctx.fillText(fmtV(mV), W + 6, yTop + 3.5);
+    ctx.fillText('0', W + 6, yBot + 3.5);
+  }
+
+  // 3. CVD Axis Scale
+  if (indicators.cvd && cvdData && cvdData.length) {
+    const { L, R } = visRange();
+    const cvdMap = new Map();
+    cvdData.forEach(item => cvdMap.set(item.time, item));
+    let minVal = Infinity, maxVal = -Infinity;
+    
+    for (let i = L; i <= R; i++) {
+      if (bars[i]) {
+        const cur = cvdMap.get(bars[i].time);
+        if (cur) {
+          const prev = i > 0 ? cvdMap.get(bars[i - 1].time) : cur;
+          const prevCvd = prev ? prev.cvd : cur.cvd;
+          const curCvd = cur.cvd;
+          const delta = curCvd - prevCvd;
+          const absDelta = Math.abs(delta);
+          
+          const rp = bars[i].high - bars[i].low;
+          let wUpper = 0, wLower = 0;
+          if (rp > 0) {
+            wUpper = (bars[i].high - Math.max(bars[i].open, bars[i].close)) / rp;
+            wLower = (Math.min(bars[i].open, bars[i].close) - bars[i].low) / rp;
+          }
+          const cvdHigh = Math.max(prevCvd, curCvd) + wUpper * absDelta;
+          const cvdLow = Math.min(prevCvd, curCvd) - wLower * absDelta;
+          
+          if (cvdLow < minVal) minVal = cvdLow;
+          if (cvdHigh > maxVal) maxVal = cvdHigh;
+        }
+      }
+    }
+    
+    if (minVal !== Infinity && maxVal !== -Infinity) {
+      const yTop = CVDT() + 4;
+      const yBot = CVDT() + CVDH() - 4;
+      ctx.strokeStyle = C.axisBorder;
+      ctx.beginPath();
+      ctx.moveTo(W, yTop); ctx.lineTo(W + 3, yTop);
+      ctx.moveTo(W, yBot); ctx.lineTo(W + 3, yBot);
+      ctx.stroke();
+      ctx.fillStyle = C.axisText;
+      ctx.fillText(fmtV(maxVal), W + 6, yTop + 3.5);
+      ctx.fillText(fmtV(minVal), W + 6, yBot + 3.5);
+    }
+  }
+}
+
+function drawTAxis(L, R, W, H) {
+  ctx.fillStyle = C.axisArea; ctx.fillRect(0, H, wWidth, TA_H);
+  ctx.strokeStyle = C.axisBorder; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(wWidth, H); ctx.stroke();
+  ctx.font = '10px Consolas,monospace'; ctx.fillStyle = C.axisText; ctx.textAlign = 'center';
+  // Adaptive spacing: iterate with a rough step, then skip labels whose
+  // rendered text would overlap the previous one. This handles all zoom levels
+  // correctly without needing separate logic per timeframe.
+  const step = Math.max(1, Math.ceil(50 / barW));
+  let lastEndX = -9999;
+  for (let i = L; i <= R; i += step) {
+    if (!bars[i]) continue;
+    const x = bx(i);
+    if (x < 0 || x > W) continue;
+    const lbl = fmtT(bars[i].time, tf);
+    const tw = ctx.measureText(lbl).width;
+    if (x - tw / 2 <= lastEndX + 8) continue; // skip overlapping labels
+    ctx.fillText(lbl, x, H + 17);
+    lastEndX = x + tw / 2;
+  }
+}
+
+function drawCurPrice(price, pr, W) {
+  if (price == null || price < pr.lo || price > pr.hi) return;
+  const y = p2y(price, pr.lo, pr.hi);
+  ctx.save(); ctx.setLineDash(C.dash); ctx.strokeStyle = C.cpLine; ctx.lineWidth = 1; ctx.globalAlpha = .5;
+  ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); ctx.restore();
+  const lbl = fmtP(price), BH = 18, BW = PA_W - 3, BX = W + 1;
+  ctx.fillStyle = C.cpBg; ctx.fillRect(BX, y - BH / 2, BW, BH);
+  ctx.strokeStyle = C.cpBorder; ctx.lineWidth = 1; ctx.strokeRect(BX, y - BH / 2, BW, BH);
+  ctx.fillStyle = C.cpText; ctx.font = 'bold 10px Consolas,monospace'; ctx.textAlign = 'center';
+  ctx.fillText(lbl, BX + BW / 2, y + 3.5);
+  // Countdown — prefer nextClose set by Bybit WS; fall back to estimating from
+  // the last bar's open time + tfSec so it shows even before the first WS tick.
+  const lastB = bars[bars.length - 1];
+  const effClose = nextClose > 0 ? nextClose : (lastB ? lastB.time + tfSec : 0);
+  const rem = effClose - Date.now() / 1000;
+  if (rem > 0 && rem < tfSec * 1.5) {
+    const cdY = Math.min(y + BH / 2 + 10, MH() - 8); // clamp: stay inside chart area
+    const cdH = 13;
+    const cdW = BW - 6;
+    const cdX = BX + 3;
+    
+    // Draw background box for the countdown to block overlapping items
+    ctx.fillStyle = '#1c1005'; // warm amber dark background
+    ctx.fillRect(cdX, cdY - cdH / 2, cdW, cdH);
+    ctx.strokeStyle = '#8c450a'; // warm amber border
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cdX, cdY - cdH / 2, cdW, cdH);
+    
+    ctx.font = 'bold 9px Consolas,monospace';
+    ctx.fillStyle = C.cdText;
+    ctx.fillText(fmtCd(rem), BX + BW / 2, cdY + 3);
+  }
+}
+
+function drawCross(pr, W, H, MHv) {
+  ctx.save();
+  ctx.strokeStyle = C.cross;
+  ctx.lineWidth = 1.25; // slightly wider pixel line for better visibility
+  ctx.setLineDash(C.dash);
+  
+  // Draw full vertical crosshair
+  ctx.beginPath(); ctx.moveTo(mx, PAD_T); ctx.lineTo(mx, H); ctx.stroke();
+  
+  // Draw full horizontal crosshair (regardless of panel borders)
+  ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(W, my); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+
+  // Determine which sub-panel cursor is on and draw Y-axis label accordingly
+  let yLabelText = '';
+  
+  if (my < MHv) {
+    const p = y2p(my, pr.lo, pr.hi);
+    if (p > 0) yLabelText = fmtP(p);
+  } else if (indicators.volume && my >= VT() && my < VT() + VH()) {
+    const mV = calcMV();
+    const v = mV * (1 - (my - VT()) / (VH() - 2));
+    if (v >= 0) yLabelText = fmtV(v);
+  } else if (indicators.cvd && my >= CVDT() && my < CVDT() + CVDH() && cvdData && cvdData.length) {
+    const { L, R } = visRange();
+    const cvdMap = new Map();
+    cvdData.forEach(item => cvdMap.set(item.time, item));
+    let minVal = Infinity, maxVal = -Infinity;
+    for (let i = L; i <= R; i++) {
+      if (bars[i]) {
+        const cur = cvdMap.get(bars[i].time);
+        if (cur) {
+          const prev = i > 0 ? cvdMap.get(bars[i - 1].time) : cur;
+          const prevCvd = prev ? prev.cvd : cur.cvd;
+          const curCvd = cur.cvd;
+          const delta = curCvd - prevCvd;
+          const absDelta = Math.abs(delta);
+          const rp = bars[i].high - bars[i].low;
+          let wUpper = 0, wLower = 0;
+          if (rp > 0) {
+            wUpper = (bars[i].high - Math.max(bars[i].open, bars[i].close)) / rp;
+            wLower = (Math.min(bars[i].open, bars[i].close) - bars[i].low) / rp;
+          }
+          const cvdHigh = Math.max(prevCvd, curCvd) + wUpper * absDelta;
+          const cvdLow = Math.min(prevCvd, curCvd) - wLower * absDelta;
+          if (cvdLow < minVal) minVal = cvdLow;
+          if (cvdHigh > maxVal) maxVal = cvdHigh;
+        }
+      }
+    }
+    if (minVal !== Infinity && maxVal !== -Infinity) {
+      const top = CVDT() + 4;
+      const bot = CVDT() + CVDH() - 4;
+      const cvdVal = maxVal - ((my - top) / (bot - top)) * (maxVal - minVal);
+      yLabelText = fmtV(cvdVal);
+    }
+  }
+
+  if (yLabelText) {
+    ctx.fillStyle = C.xLbl;
+    ctx.fillRect(W + 1, my - 8, PA_W - 3, 16);
+    ctx.fillStyle = C.xLblT;
+    ctx.font = '10px Consolas,monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(yLabelText, W + 5, my + 3.5);
+  }
+
+  const idx = Math.round(ib(mx));
+  if (idx >= 0 && idx < bars.length) {
+    const b = bars[idx], lbl = fmtTD(b.time, tf);
+    ctx.font = '10px Consolas,monospace'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(lbl).width + 14, lx = Math.min(Math.max(mx, tw / 2 + 2), W - tw / 2 - 2);
+    ctx.fillStyle = C.xLbl; ctx.fillRect(lx - tw / 2, H, tw, TA_H);
+    ctx.fillStyle = C.xLblT; ctx.fillText(lbl, lx, H + 17);
+    showOHLCV(b);
+  }
+}
+
+function showOHLCV(b) {
+  const el = document.getElementById('ohlcv-ov');
+  if (!b) { el.innerHTML = ''; return; }
+  const c  = b.close >= b.open ? C.bull : C.bear;
+  const lbl = s => `<span style="color:#94a3b8;font-size:10px">${s}</span>`;
+  const val = s => `<span style="color:${c};font-weight:600"> ${s}</span>`;
+  const vol = s => `<span style="color:#cbd5e1"> ${s}</span>`;
+  el.innerHTML =
+    lbl('O') + val(fmtP(b.open))  + '&nbsp;&nbsp;' +
+    lbl('H') + val(fmtP(b.high))  + '&nbsp;&nbsp;' +
+    lbl('L') + val(fmtP(b.low))   + '&nbsp;&nbsp;' +
+    lbl('C') + val(fmtP(b.close)) +
+    (b.volume ? '&nbsp;&nbsp;' + lbl('V') + vol(fmtV(b.volume)) : '');
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ON-DEMAND BUFFERING
+// Triggered when the user scrolls left far enough to see empty canvas
+// (i.e. bar index 0 is no longer at/past the left screen edge).
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function maybeBufferMore() {
+  if (bufState.busy || bufState.reachedStart || !bars.length) return;
+  // Pixel X of the LEFT edge of bar index 0 (oldest candle)
+  const bar0LeftPx = bx(0) - barW / 2;
+  // Trigger when bar 0 is within EDGE_BARS bar-widths of the left canvas edge,
+  // i.e. the user is starting to see (or already seeing) empty space.
+  if (bar0LeftPx < EDGE_BARS * barW) triggerBufferMore();
+}
+
+async function triggerBufferMore() {
+  if (bufState.busy || bufState.reachedStart) return;
+  bufState.busy = true;
+  const myGen = bufState.gen; // capture: if pair switches, gen increments and we abort
+  showBufInd(true);
+  try {
+    const oldestKnownSec = bars.length ? bars[0].time : null;
+    const res = await fetch('/api/buffer-more', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldestKnownSec })
+    });
+    const d = await res.json();
+
+    // Discard response if a pair/TF switch happened while we were waiting.
+    // This prevents prepending BTC bars onto a PEPE chart after a switch.
+    if (myGen !== bufState.gen) {
+      bufState.busy = false;
+      showBufInd(false);
+      return;
+    }
+
+    if (d.busy) { bufState.busy = false; showBufInd(false); return; }
+
+    if (d.ok && d.newBars && d.newBars.length) {
+      // Extra guard: only prepend bars that are genuinely older than current bars[0]
+      const currentOldest = bars.length ? bars[0].time : Infinity;
+      const safeNew = d.newBars.filter(b => b.time < currentOldest);
+      if (safeNew.length) {
+        bars = [...safeNew, ...bars];
+        leftBar += safeNew.length;
+        hvnDirty = true; // HVN needs recomputation with expanded history
+        document.getElementById('sb-bars').textContent = `Bars: ${bars.length}`;
+      }
+    }
+    bufState.reachedStart = !!d.reachedStart;
+    bufState.target       = d.target ?? bufState.target;
+  } catch (e) {
+    console.error('buffer-more failed:', e.message);
+  } finally {
+    bufState.busy = false;
+    showBufInd(false);
+    render();
+  }
+}
+
+
+function showBufInd(on) { document.getElementById('buf-ind').classList.toggle('show', on); }
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DRAWING SYSTEM
+// Tools: line, rect, fibo, path, longshort
+// Storage: localStorage + server /api/drawings (Shared per Symbol)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const DEFAULT_CONFIGS = {
+  line: { color: '#e87722', lineWidth: 1.5, lineDash: 'solid' },
+  rect: {
+    borderColor: '#3b82f6',
+    borderWidth: 2,
+    borderDash: 'solid',
+    fillColor: '#3b82f6',
+    fillOpacity: 0.15,
+    hasBorder: true,
+    hasFill: true,
+  },
+  fibo: {
+    color: '#ffffff',
+    lineWidth: 1,
+    lineDash: 'solid',
+    levels: [0, 0.5, 0.618, 1, 1.618],
+    levelColors: {
+      '0': '#00bcd4',
+      '0.5': '#ffd600',
+      '0.618': '#ffffff',
+      '1': '#ffffff',
+      '1.618': '#ffd600'
+    }
+  },
+  path: { color: '#4fc3f7', lineWidth: 2, lineDash: 'solid' },
+  longshort: {
+    direction: 'long',
+    targetColor: '#26a69a',
+    targetOpacity: 0.22,
+    stopColor: '#ef5350',
+    stopOpacity: 0.32,
+    lineWidth: 1,
+    showText: true
+  }
+};
+
+function getToolConfig(type) {
+  try {
+    const raw = localStorage.getItem('hf_default_draw_configs');
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved && saved[type]) return JSON.parse(JSON.stringify(saved[type]));
+    }
+  } catch {}
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIGS[type] || DEFAULT_CONFIGS.line));
+}
+
+function saveToolConfig(type, cfg) {
+  try {
+    let all = {};
+    const raw = localStorage.getItem('hf_default_draw_configs');
+    if (raw) all = JSON.parse(raw) || {};
+    all[type] = JSON.parse(JSON.stringify(cfg));
+    localStorage.setItem('hf_default_draw_configs', JSON.stringify(all));
+  } catch {}
+}
+
+let DM = {
+  drawings: [],
+  activeTool: null,
+  drawing: null,
+  selected: null,
+  hoveredId: null,
+  dragState: null,
+};
+
+let drawInProgress = false;
+let isDraggingDraw = false;
+
+function genId() { return 'd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function getDash(style) {
+  if (style === 'dashed') return [6, 4];
+  if (style === 'dotted') return [2, 4];
+  return [];
+}
+
+function drawAllObjects(pr, W, MHv) {
+  for (const d of DM.drawings) {
+    const isSelected = DM.selected === d.id;
+    const isHovered  = DM.hoveredId === d.id;
+    drawSingleObject(d, pr, W, MHv, isSelected || isHovered, false);
+  }
+  if (DM.drawing) {
+    drawSingleObject(DM.drawing, pr, W, MHv, false, true);
+  }
+}
+
+function drawSingleObject(obj, pr, W, MHv, highlighted, inProgress) {
+  if (!obj.points || !obj.points.length) return;
+  const pts = obj.points.map(p => tp2xy(p));
+  const cfg = obj.config || getToolConfig(obj.type);
+
+  ctx.save();
+  ctx.strokeStyle = cfg.color || cfg.borderColor || '#e87722';
+  ctx.lineWidth   = cfg.lineWidth ?? cfg.borderWidth ?? 1.5;
+  ctx.setLineDash(getDash(cfg.lineDash || cfg.borderDash));
+
+  switch(obj.type) {
+    case 'line':      drawObjLine(pts, cfg, W, MHv); break;
+    case 'rect':      drawObjRect(pts, cfg); break;
+    case 'fibo':      drawObjFibo(pts, obj.points, cfg, pr, W); break;
+    case 'path':      drawObjPath(pts, cfg, inProgress); break;
+    case 'longshort': drawObjLongShort(pts, obj.points, cfg, pr, W); break;
+  }
+
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  if (highlighted && !inProgress) {
+    drawObjectHandles(obj);
+  }
+}
+
+function drawObjLine(pts, cfg, W, MHv) {
+  if (pts.length < 2) return;
+  const [p1, p2] = pts;
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+}
+
+function drawObjRect(pts, cfg) {
+  if (pts.length < 2) return;
+  const x1 = Math.min(pts[0].x, pts[1].x);
+  const y1 = Math.min(pts[0].y, pts[1].y);
+  const w  = Math.abs(pts[1].x - pts[0].x);
+  const h  = Math.abs(pts[1].y - pts[0].y);
+
+  if (cfg.hasFill !== false && (cfg.fillOpacity ?? 0.15) > 0) {
+    ctx.save();
+    ctx.fillStyle = cfg.fillColor || cfg.borderColor || '#3b82f6';
+    ctx.globalAlpha = cfg.fillOpacity ?? 0.15;
+    ctx.fillRect(x1, y1, w, h);
+    ctx.restore();
+  }
+  const bw = cfg.borderWidth ?? cfg.lineWidth ?? 2;
+  if (cfg.hasBorder !== false && bw > 0) {
+    ctx.save();
+    ctx.strokeStyle = cfg.borderColor || cfg.color || '#3b82f6';
+    ctx.lineWidth = bw;
+    ctx.setLineDash(getDash(cfg.borderDash || cfg.lineDash));
+    ctx.strokeRect(x1, y1, w, h);
+    ctx.restore();
+  }
+}
+
+function drawObjFibo(pts, tpts, cfg, pr, W) {
+  if (pts.length < 2) return;
+  const p1 = tpts[0].price;
+  const p2 = tpts[1].price;
+  const x1 = pts[0].x, x2 = pts[1].x;
+  const levels = cfg.levels || [0, 0.5, 0.618, 1, 1.618];
+  const levelColors = cfg.levelColors || {
+    '0': '#00bcd4',
+    '0.5': '#ffd600',
+    '0.618': '#ffffff',
+    '1': '#ffffff',
+    '1.618': '#ffd600'
+  };
+
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(x1, pts[0].y);
+  ctx.lineTo(x2, pts[1].y);
+  ctx.stroke();
+  ctx.restore();
+
+  const lw = cfg.lineWidth ?? 1;
+
+  for (const lvl of levels) {
+    const price = p2 + (p1 - p2) * lvl;
+    const y = p2y(price, pr.lo, pr.hi);
+    const col = levelColors[String(lvl)] || cfg.color || '#ffffff';
+
+    if (lw > 0) {
+      ctx.save();
+      ctx.strokeStyle = col;
+      ctx.lineWidth   = lw;
+      ctx.setLineDash(getDash(cfg.lineDash));
+      ctx.beginPath();
+      ctx.moveTo(minX, y);
+      ctx.lineTo(maxX, y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = col;
+    ctx.font = '10px Consolas,monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${lvl} (${fmtP(price)})`, maxX + 6, y + 3.5);
+  }
+}
+
+function drawObjPath(pts, cfg, inProgress) {
+  if (!pts.length) return;
+  const lw = cfg.lineWidth ?? 2;
+  if (lw > 0) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+  }
+
+  if (pts.length >= 2) {
+    const last = pts[pts.length - 1];
+    const prev = pts[pts.length - 2];
+    drawArrowHead(prev, last, cfg.color || '#4fc3f7', Math.max(1, lw));
+  }
+
+  ctx.fillStyle = cfg.color || '#4fc3f7';
+  for (const p of pts) {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawArrowHead(from, to, color, lw) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 2) return;
+  const angle = Math.atan2(dy, dx);
+  const size  = 9 + lw * 1.5;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(to.x, to.y);
+  ctx.lineTo(to.x - size * Math.cos(angle - 0.45), to.y - size * Math.sin(angle - 0.45));
+  ctx.lineTo(to.x - (size * 0.7) * Math.cos(angle), to.y - (size * 0.7) * Math.sin(angle));
+  ctx.lineTo(to.x - size * Math.cos(angle + 0.45), to.y - size * Math.sin(angle + 0.45));
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawObjLongShort(pts, tpts, cfg, pr, W) {
+  if (pts.length < 2) return;
+  const isLong = (cfg.direction || 'long') === 'long';
+  const entryP  = tpts[0].price;
+  const targetP = tpts[1].price;
+  const stopP   = tpts.length >= 3 ? tpts[2].price : (entryP - (targetP - entryP) * 0.5);
+
+  const entryY  = pts[0].y;
+  const targetY = pts[1].y;
+  const stopY   = p2y(stopP, pr.lo, pr.hi);
+
+  const leftX  = Math.min(pts[0].x, pts[1].x);
+  const rightX = Math.max(pts[0].x, pts[1].x);
+  const w = rightX - leftX;
+
+  ctx.save();
+
+  // Target Box (Top)
+  ctx.fillStyle = cfg.targetColor || '#26a69a';
+  ctx.globalAlpha = cfg.targetOpacity ?? 0.22;
+  ctx.fillRect(leftX, Math.min(entryY, targetY), w, Math.abs(targetY - entryY));
+
+  // Stop Box (Bottom)
+  ctx.fillStyle = cfg.stopColor || '#ef5350';
+  ctx.globalAlpha = cfg.stopOpacity ?? 0.32;
+  ctx.fillRect(leftX, Math.min(entryY, stopY), w, Math.abs(stopY - entryY));
+
+  ctx.globalAlpha = 1;
+
+  const lw = cfg.lineWidth ?? 1;
+  if (lw > 0) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = lw;
+    ctx.strokeRect(leftX, Math.min(targetY, stopY), w, Math.abs(targetY - stopY));
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(leftX, entryY); ctx.lineTo(rightX, entryY); ctx.stroke();
+  }
+
+  if (cfg.showText) {
+    const targetDiff = Math.abs(targetP - entryP);
+    const targetPct  = ((targetDiff / Math.max(1e-8, entryP)) * 100).toFixed(3);
+    const stopDiff   = Math.max(1e-8, Math.abs(entryP - stopP));
+    const stopPct    = ((stopDiff / Math.max(1e-8, entryP)) * 100).toFixed(3);
+    const rr = (targetDiff / stopDiff).toFixed(2);
+    const midX = (leftX + rightX) / 2;
+
+    drawRoundedBadge(
+      midX, Math.min(targetY, entryY) - 10,
+      `Target: ${fmtP(targetP)} (${targetPct}%)`,
+      'rgba(38,166,154,0.9)', '#ffffff', '#80cbc4'
+    );
+
+    drawRoundedBadge(
+      midX, entryY,
+      `Risk/reward ratio: ${rr}`,
+      (isLong ? 'rgba(38,166,154,0.9)' : 'rgba(239,83,80,0.9)'),
+      '#ffffff', 'rgba(255,255,255,0.4)'
+    );
+
+    drawRoundedBadge(
+      midX, Math.max(stopY, entryY) + 10,
+      `Stop: ${fmtP(stopP)} (${stopPct}%)`,
+      'rgba(239,83,80,0.9)', '#ffffff', '#ff8a80'
+    );
+  }
+
+  ctx.restore();
+}
+
+function drawRoundedBadge(cx, cy, text, bgCol, textCol, borderCol) {
+  ctx.save();
+  ctx.font = 'bold 9.5px Consolas,monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const padH = 8;
+  const tw = ctx.measureText(text).width;
+  const w = tw + padH * 2;
+  const h = 18;
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+
+  ctx.fillStyle = bgCol;
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(x, y, w, h, 3) : ctx.rect(x, y, w, h);
+  ctx.fill();
+
+  if (borderCol) {
+    ctx.strokeStyle = borderCol;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = textCol;
+  ctx.fillText(text, cx, cy);
+  ctx.restore();
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// HANDLES & RESIZING LOGIC
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function getHandles(obj) {
+  if (!obj || !obj.points || !obj.points.length) return [];
+  const pts = obj.points.map(p => tp2xy(p));
+
+  switch(obj.type) {
+    case 'rect': {
+      if (pts.length < 2) return [];
+      const minX = Math.min(pts[0].x, pts[1].x), maxX = Math.max(pts[0].x, pts[1].x);
+      const minY = Math.min(pts[0].y, pts[1].y), maxY = Math.max(pts[0].y, pts[1].y);
+      const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
+      return [
+        { idx: 0, type: 'nw', x: minX, y: minY, cursor: 'nwse-resize' },
+        { idx: 1, type: 'n',  x: midX, y: minY, cursor: 'ns-resize' },
+        { idx: 2, type: 'ne', x: maxX, y: minY, cursor: 'nesw-resize' },
+        { idx: 3, type: 'e',  x: maxX, y: midY, cursor: 'ew-resize' },
+        { idx: 4, type: 'se', x: maxX, y: maxY, cursor: 'nwse-resize' },
+        { idx: 5, type: 's',  x: midX, y: maxY, cursor: 'ns-resize' },
+        { idx: 6, type: 'sw', x: minX, y: maxY, cursor: 'nesw-resize' },
+        { idx: 7, type: 'w',  x: minX, y: midY, cursor: 'ew-resize' },
+      ];
+    }
+    case 'longshort': {
+      if (pts.length < 2) return [];
+      const pr = calcPR();
+      const pEntry  = pts[0];
+      const pTarget = pts[1];
+      const stopP   = obj.points[2]?.price ?? (obj.points[0].price - (obj.points[1].price - obj.points[0].price) * 0.5);
+      const stopY   = p2y(stopP, pr.lo, pr.hi);
+      const leftX   = Math.min(pEntry.x, pTarget.x);
+      const rightX  = Math.max(pEntry.x, pTarget.x);
+      return [
+        { idx: 0, type: 'entry',  x: leftX,  y: pEntry.y,  cursor: 'crosshair' },
+        { idx: 1, type: 'target', x: leftX,  y: pTarget.y, cursor: 'ns-resize' },
+        { idx: 2, type: 'stop',   x: leftX,  y: stopY,     cursor: 'ns-resize' },
+        { idx: 3, type: 'width',  x: rightX, y: pEntry.y,  cursor: 'ew-resize' },
+      ];
+    }
+    default: {
+      return pts.map((p, i) => ({ idx: i, type: 'point', x: p.x, y: p.y, cursor: 'crosshair' }));
+    }
+  }
+}
+
+function drawObjectHandles(obj) {
+  const handles = getHandles(obj);
+  for (const h of handles) {
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ff8c37';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function hitTestHandles(obj, x, y) {
+  const handles = getHandles(obj);
+  for (let i = 0; i < handles.length; i++) {
+    if (dist(x, y, handles[i].x, handles[i].y) < 9) return handles[i];
+  }
+  return null;
+}
+
+function dist(ax, ay, bx2, by) { return Math.sqrt((ax - bx2) ** 2 + (ay - by) ** 2); }
+
+function distToSegment(px, py, ax, ay, bx2, by) {
+  const dx = bx2 - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-6) return dist(px, py, ax, ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return dist(px, py, ax + t * dx, ay + t * dy);
+}
+
+function hitTestObjects(x, y) {
+  const pr = calcPR();
+  for (let i = DM.drawings.length - 1; i >= 0; i--) {
+    const d = DM.drawings[i];
+    if (hitTestSingleObject(d, x, y, pr)) return d.id;
+  }
+  return null;
+}
+
+function hitTestSingleObject(obj, x, y, pr) {
+  if (!obj.points || !obj.points.length) return false;
+  const pts = obj.points.map(p => tp2xy(p));
+  const HIT = 8;
+
+  switch(obj.type) {
+    case 'line': {
+      if (pts.length < 2) return false;
+      return distToSegment(x, y, pts[0].x, pts[0].y, pts[1].x, pts[1].y) < HIT;
+    }
+    case 'rect': {
+      if (pts.length < 2) return false;
+      const x1 = Math.min(pts[0].x, pts[1].x) - HIT;
+      const y1 = Math.min(pts[0].y, pts[1].y) - HIT;
+      const x2 = Math.max(pts[0].x, pts[1].x) + HIT;
+      const y2 = Math.max(pts[0].y, pts[1].y) + HIT;
+      return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+    }
+    case 'fibo': {
+      if (pts.length < 2) return false;
+      const minX = Math.min(pts[0].x, pts[1].x) - HIT;
+      const maxX = Math.max(pts[0].x, pts[1].x) + HIT;
+      if (x < minX || x > maxX) return false;
+      const p1 = obj.points[0].price, p2 = obj.points[1].price;
+      const levels = obj.config?.levels || [0, 0.5, 0.618, 1, 1.618];
+      for (const lvl of levels) {
+        const py = p2y(p2 + (p1 - p2) * lvl, pr.lo, pr.hi);
+        if (Math.abs(y - py) < HIT) return true;
+      }
+      return distToSegment(x, y, pts[0].x, pts[0].y, pts[1].x, pts[1].y) < HIT;
+    }
+    case 'path': {
+      for (let i = 0; i < pts.length - 1; i++) {
+        if (distToSegment(x, y, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y) < HIT) return true;
+      }
+      for (const p of pts) if (dist(x, y, p.x, p.y) < HIT) return true;
+      return false;
+    }
+    case 'longshort': {
+      if (pts.length < 2) return false;
+      const leftX  = Math.min(pts[0].x, pts[1].x) - HIT;
+      const rightX = Math.max(pts[0].x, pts[1].x) + HIT;
+      const stopP  = obj.points[2]?.price ?? (obj.points[0].price - (obj.points[1].price - obj.points[0].price) * 0.5);
+      const stopY  = p2y(stopP, pr.lo, pr.hi);
+      const minY   = Math.min(pts[0].y, pts[1].y, stopY) - HIT;
+      const maxY   = Math.max(pts[0].y, pts[1].y, stopY) + HIT;
+      return x >= leftX && x <= rightX && y >= minY && y <= maxY;
+    }
+  }
+  return false;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// MOUSE & DRAWING ACTIONS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function drawMouseDown(e) {
+  if (!DM.activeTool || e.button !== 0) return false;
+  const { x, y } = canvasXY(e);
+  if (x > CW()) return false;
+  const tp = xy2tp(x, y);
+
+  if (!DM.drawing) {
+    const cfg = getToolConfig(DM.activeTool);
+    let pts = [tp, tp];
+    if (DM.activeTool === 'longshort') {
+      const isLong = (cfg.direction || 'long') === 'long';
+      const targetP = isLong ? tp.price * 1.008 : tp.price * 0.992;
+      const stopP   = isLong ? tp.price * 0.996 : tp.price * 1.004;
+      pts = [
+        tp,
+        { time: tp.time + tfSec * 15, price: targetP },
+        { time: tp.time + tfSec * 15, price: stopP }
+      ];
+    }
+    DM.drawing = {
+      id:     '_new',
+      type:   DM.activeTool,
+      symbol: sym,
+      points: pts,
+      config: cfg,
+    };
+    drawInProgress = true;
+    render();
+    return true;
+  } else if (DM.activeTool === 'path') {
+    DM.drawing.points.push(tp);
+    render();
+    return true;
+  } else {
+    DM.drawing.points[1] = tp;
+    finalizeDrawing();
+    return true;
+  }
+}
+
+function drawMouseMove(e) {
+  if (!DM.drawing || !drawInProgress) return false;
+  const { x, y } = canvasXY(e);
+  const tp = xy2tp(x, y);
+  const obj = DM.drawing;
+
+  if (obj.type === 'path') {
+    obj.points[obj.points.length - 1] = tp;
+  } else if (obj.type === 'longshort') {
+    obj.points[1] = { time: tp.time, price: tp.price };
+    const stopP = obj.points[0].price - (tp.price - obj.points[0].price) * 0.5;
+    obj.points[2] = { time: tp.time, price: stopP };
+  } else {
+    obj.points[1] = tp;
+  }
+  render();
+  return true;
+}
+
+function drawMouseUp(e) {
+  if (!DM.drawing || !drawInProgress || e.button !== 0) return false;
+  const { x, y } = canvasXY(e);
+  const p0 = tp2xy(DM.drawing.points[0]);
+  const dragDist = dist(p0.x, p0.y, x, y);
+
+  if (DM.drawing.type !== 'path' && dragDist > 8) {
+    if (DM.drawing.type === 'longshort') {
+      const tp = xy2tp(x, y);
+      DM.drawing.points[1] = { time: tp.time, price: tp.price };
+      const stopP = DM.drawing.points[0].price - (tp.price - DM.drawing.points[0].price) * 0.5;
+      DM.drawing.points[2] = { time: tp.time, price: stopP };
+    } else {
+      DM.drawing.points[1] = xy2tp(x, y);
+    }
+    finalizeDrawing();
+    return true;
+  }
+  return false;
+}
+
+function finalizeDrawing() {
+  const obj = DM.drawing;
+  if (!obj) return;
+  obj.id = genId();
+  DM.drawings.push(obj);
+  DM.drawing = null;
+  drawInProgress = false;
+  DM.selected = obj.id;
+  DM.activeTool = null;
+  setActiveTool(null);
+  drawPersist();
+  render();
+}
+
+function selectMouseDown(e) {
+  if (DM.activeTool || e.button !== 0) return false;
+  const { x, y } = canvasXY(e);
+  if (x > CW()) return false;
+
+  const selObj = DM.selected ? DM.drawings.find(d => d.id === DM.selected) : null;
+
+  if (selObj) {
+    const handle = hitTestHandles(selObj, x, y);
+    if (handle) {
+      isDraggingDraw = true;
+      DM.dragState = {
+        type: 'handle',
+        handle: handle,
+        origPoints: selObj.points.map(p => ({ ...p })),
+        startTP: xy2tp(x, y)
+      };
+      return true;
+    }
+  }
+
+  const hitId = hitTestObjects(x, y);
+  if (hitId) {
+    DM.selected = hitId;
+    const obj = DM.drawings.find(d => d.id === hitId);
+    isDraggingDraw = true;
+    DM.dragState = {
+      type: 'move',
+      origPoints: obj.points.map(p => ({ ...p })),
+      startTP: xy2tp(x, y)
+    };
+    render();
+    return true;
+  }
+
+  if (DM.selected) {
+    DM.selected = null;
+    render();
+  }
+  return false;
+}
+
+function selectMouseMove(e) {
+  if (!isDraggingDraw || !DM.dragState) return false;
+  const { x, y } = canvasXY(e);
+  const selObj = DM.drawings.find(d => d.id === DM.selected);
+  if (!selObj) return false;
+
+  const currentTP = xy2tp(x, y);
+
+  if (DM.dragState.type === 'handle') {
+    const h = DM.dragState.handle;
+
+    if (selObj.type === 'rect') {
+      const orig0 = DM.dragState.origPoints[0];
+      const orig1 = DM.dragState.origPoints[1];
+      const minT = Math.min(orig0.time, orig1.time), maxT = Math.max(orig0.time, orig1.time);
+      const minP = Math.min(orig0.price, orig1.price), maxP = Math.max(orig0.price, orig1.price);
+
+      let newMinT = minT, newMaxT = maxT, newMinP = minP, newMaxP = maxP;
+
+      switch(h.type) {
+        case 'nw': newMinT = currentTP.time; newMaxP = currentTP.price; break;
+        case 'n':  newMaxP = currentTP.price; break;
+        case 'ne': newMaxT = currentTP.time; newMaxP = currentTP.price; break;
+        case 'e':  newMaxT = currentTP.time; break;
+        case 'se': newMaxT = currentTP.time; newMinP = currentTP.price; break;
+        case 's':  newMinP = currentTP.price; break;
+        case 'sw': newMinT = currentTP.time; newMinP = currentTP.price; break;
+        case 'w':  newMinT = currentTP.time; break;
+      }
+      selObj.points[0] = { time: newMinT, price: newMaxP };
+      selObj.points[1] = { time: newMaxT, price: newMinP };
+    } else if (selObj.type === 'longshort') {
+      switch(h.type) {
+        case 'entry': {
+          selObj.points[0].price = currentTP.price;
+          selObj.points[0].time  = currentTP.time;
+          break;
+        }
+        case 'target': {
+          selObj.points[1].price = currentTP.price;
+          break;
+        }
+        case 'stop': {
+          if (!selObj.points[2]) selObj.points[2] = { time: selObj.points[1].time, price: currentTP.price };
+          selObj.points[2].price = currentTP.price;
+          break;
+        }
+        case 'width': {
+          selObj.points[1].time = currentTP.time;
+          if (selObj.points[2]) selObj.points[2].time = currentTP.time;
+          break;
+        }
+      }
+    } else {
+      selObj.points[h.idx] = currentTP;
+    }
+  } else if (DM.dragState.type === 'move') {
+    const dt = currentTP.time - DM.dragState.startTP.time;
+    const dp = currentTP.price - DM.dragState.startTP.price;
+    for (let i = 0; i < selObj.points.length; i++) {
+      const orig = DM.dragState.origPoints[i];
+      selObj.points[i] = {
+        time:  orig.time + dt,
+        price: orig.price + dp
+      };
+    }
+  }
+  render();
+  return true;
+}
+
+function selectMouseUp() {
+  if (!isDraggingDraw) return false;
+  isDraggingDraw = false;
+  DM.dragState   = null;
+  drawPersist();
+  render();
+  return true;
+}
+
+function updateHover(e) {
+  if (DM.activeTool || isDraggingDraw) return;
+  const { x, y } = canvasXY(e);
+  if (x > CW()) {
+    if (DM.hoveredId) { DM.hoveredId = null; render(); }
+    return;
+  }
+
+  // Check handle hover
+  if (DM.selected) {
+    const selObj = DM.drawings.find(d => d.id === DM.selected);
+    if (selObj) {
+      const h = hitTestHandles(selObj, x, y);
+      if (h) {
+        cv.style.cursor = h.cursor || 'pointer';
+        return;
+      }
+    }
+  }
+
+  const hitId = hitTestObjects(x, y);
+  if (hitId !== DM.hoveredId) {
+    DM.hoveredId = hitId;
+    cv.style.cursor = hitId ? 'pointer' : '';
+    render();
+  }
+}
+
+function deleteSelected() {
+  if (!DM.selected) return;
+  DM.drawings = DM.drawings.filter(d => d.id !== DM.selected);
+  DM.selected = null;
+  drawPersist();
+  render();
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// PERSISTENCE (Shared Per Symbol)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const DRAW_STORAGE_KEY = () => `hf_draw_${sym}`;
+
+function drawPersist() {
+  try { localStorage.setItem(DRAW_STORAGE_KEY(), JSON.stringify(DM.drawings)); } catch(e) {}
+  fetch('/api/drawings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbol: sym, drawings: DM.drawings })
+  }).catch(() => {});
+}
+
+async function drawLoad(newSym) {
+  DM.drawings  = [];
+  DM.selected  = null;
+  DM.drawing   = null;
+  DM.hoveredId = null;
+  DM.activeTool = null;
+  setActiveTool(null);
+
+  const key = `hf_draw_${newSym}`;
+  try {
+    const local = localStorage.getItem(key);
+    if (local) { DM.drawings = JSON.parse(local); render(); }
+  } catch(e) {}
+
+  try {
+    const r = await fetch(`/api/drawings?symbol=${newSym}`);
+    const d = await r.json();
+    if (d.ok && d.drawings && d.drawings.length) {
+      DM.drawings = d.drawings;
+      localStorage.setItem(key, JSON.stringify(DM.drawings));
+      render();
+    }
+  } catch(e) {}
+}
+
+function setActiveTool(tool) {
+  DM.activeTool = tool;
+  document.querySelectorAll('.draw-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === tool);
+  });
+  cv.style.cursor = tool ? 'crosshair' : '';
+  if (tool) {
+    DM.selected = null;
+    DM.drawing = null;
+    drawInProgress = false;
+  }
+}
+
+// Drawing toolbar button click listeners
+document.querySelectorAll('.draw-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const tool = btn.dataset.tool;
+    setActiveTool(DM.activeTool === tool ? null : tool);
+    render();
+  });
+});
+
+document.getElementById('draw-del-btn')?.addEventListener('click', e => {
+  e.stopPropagation();
+  deleteSelected();
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DOUBLE CLICK CONFIG MODAL
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function handleDrawDblClick(e) {
+  const { x, y } = canvasXY(e);
+  const hitId = hitTestObjects(x, y);
+  if (!hitId) return false;
+  const obj = DM.drawings.find(d => d.id === hitId);
+  if (!obj) return false;
+  openEditModal(obj);
+  return true;
+}
+
+function openEditModal(obj) {
+  const modal = document.getElementById('draw-edit-modal');
+  const body  = document.getElementById('draw-edit-body');
+  const cfg   = obj.config || getToolConfig(obj.type);
+  window._editObj = obj;
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;line-height:2.2">';
+
+  if (obj.type === 'rect') {
+    html += `<tr><td style="color:#94a3b8;width:105px">Border Color</td><td>
+      <input type="color" value="${cfg.borderColor || '#3b82f6'}" id="de-border-color" style="width:40px;height:22px;border:none;background:none;cursor:pointer;vertical-align:middle">
+    </td></tr>`;
+
+    const bw = cfg.borderWidth ?? cfg.lineWidth ?? 2;
+    html += `<tr><td style="color:#94a3b8">Border Width</td><td>
+      <input type="range" min="0" max="10" step="0.5" value="${bw}" id="de-border-width" style="width:110px;vertical-align:middle">
+      <span id="de-bw-v" style="color:#ff8c37;margin-left:6px">${bw}px</span>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Border Style</td><td>
+      <select id="de-border-dash" style="background:#10131a;color:#f1f5f9;border:1px solid #2d3345;padding:3px 6px;border-radius:2px;font-family:inherit">
+        <option value="solid" ${(cfg.borderDash || 'solid') === 'solid' ? 'selected' : ''}>Solid</option>
+        <option value="dashed" ${(cfg.borderDash || '') === 'dashed' ? 'selected' : ''}>Dashed</option>
+        <option value="dotted" ${(cfg.borderDash || '') === 'dotted' ? 'selected' : ''}>Dotted</option>
+      </select>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Fill Color</td><td>
+      <input type="color" value="${cfg.fillColor || cfg.borderColor || '#3b82f6'}" id="de-fill-color" style="width:40px;height:22px;border:none;background:none;cursor:pointer;vertical-align:middle">
+    </td></tr>`;
+
+    const fo = Math.round((cfg.fillOpacity ?? 0.15) * 100);
+    html += `<tr><td style="color:#94a3b8">Fill Opacity</td><td>
+      <input type="range" min="0" max="100" value="${fo}" id="de-fill-opacity" style="width:110px;vertical-align:middle">
+      <span id="de-fo-v" style="color:#ff8c37;margin-left:6px">${fo}%</span>
+    </td></tr>`;
+  } else if (obj.type === 'longshort') {
+    const isLong = (cfg.direction || 'long') === 'long';
+    html += `<tr><td style="color:#94a3b8;width:105px">Direction</td><td>
+      <select id="de-dir" style="background:#10131a;color:#f1f5f9;border:1px solid #2d3345;padding:3px 6px;border-radius:2px;font-family:inherit">
+        <option value="long" ${isLong ? 'selected' : ''}>Long (Buy)</option>
+        <option value="short" ${!isLong ? 'selected' : ''}>Short (Sell)</option>
+      </select>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Target Color</td><td>
+      <input type="color" value="${cfg.targetColor || '#26a69a'}" id="de-target-color" style="width:40px;height:22px;border:none;background:none;cursor:pointer;vertical-align:middle">
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Stop Color</td><td>
+      <input type="color" value="${cfg.stopColor || '#ef5350'}" id="de-stop-color" style="width:40px;height:22px;border:none;background:none;cursor:pointer;vertical-align:middle">
+    </td></tr>`;
+
+    const lw = cfg.lineWidth ?? 1;
+    html += `<tr><td style="color:#94a3b8">Line Width</td><td>
+      <input type="range" min="0" max="10" step="0.5" value="${lw}" id="de-lw" style="width:110px;vertical-align:middle">
+      <span id="de-lw-v" style="color:#ff8c37;margin-left:6px">${lw}px</span>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Show Info Labels</td><td>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="de-show-text" ${cfg.showText ? 'checked' : ''} style="cursor:pointer">
+        <span style="color:#cbd5e1;font-size:10px">Show Target, R:R & Stop badges</span>
+      </label>
+    </td></tr>`;
+  } else if (obj.type === 'fibo') {
+    const lvls = cfg.levels || [0, 0.5, 0.618, 1, 1.618];
+    const lvlCols = cfg.levelColors || { '0': '#00bcd4', '0.5': '#ffd600', '0.618': '#ffffff', '1': '#ffffff', '1.618': '#ffd600' };
+
+    const lw = cfg.lineWidth ?? 1;
+    html += `<tr><td style="color:#94a3b8;width:105px">Line Width</td><td>
+      <input type="range" min="0" max="10" step="0.5" value="${lw}" id="de-lw" style="width:110px;vertical-align:middle">
+      <span id="de-lw-v" style="color:#ff8c37;margin-left:6px">${lw}px</span>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Line Style</td><td>
+      <select id="de-ls" style="background:#10131a;color:#f1f5f9;border:1px solid #2d3345;padding:3px 6px;border-radius:2px;font-family:inherit">
+        <option value="solid" ${(cfg.lineDash || 'solid') === 'solid' ? 'selected' : ''}>Solid</option>
+        <option value="dashed" ${(cfg.lineDash || '') === 'dashed' ? 'selected' : ''}>Dashed</option>
+        <option value="dotted" ${(cfg.lineDash || '') === 'dotted' ? 'selected' : ''}>Dotted</option>
+      </select>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8;vertical-align:top;padding-top:6px">Levels</td><td>
+      <div id="de-fibo-list" style="display:flex;flex-direction:column;gap:5px">`;
+    for (let i = 0; i < lvls.length; i++) {
+      const l = lvls[i];
+      const col = lvlCols[String(l)] || '#ffffff';
+      html += `<div style="display:flex;gap:5px;align-items:center">
+        <input type="number" step="0.001" value="${l}" data-fibo-idx="${i}" style="width:70px;background:#10131a;color:#f1f5f9;border:1px solid #2d3345;padding:2px 6px;border-radius:2px;font-family:inherit">
+        <input type="color" value="${col}" data-fibo-col="${i}" style="width:26px;height:20px;border:none;background:none;cursor:pointer">
+        <button type="button" onclick="removeFiboLevel(${i})" style="background:#331515;border:1px solid #6d2020;color:#ef5350;cursor:pointer;padding:2px 7px;border-radius:2px;font-size:10px">&#10005;</button>
+      </div>`;
+    }
+    html += `</div>
+      <button type="button" onclick="addFiboLevel()" style="margin-top:7px;background:#2a1a08;border:1px solid #8c450a;color:#ff8c37;cursor:pointer;padding:3px 10px;border-radius:2px;font-size:10px;font-family:inherit">+ Add Level</button>
+    </td></tr>`;
+  } else {
+    html += `<tr><td style="color:#94a3b8;width:105px">Color</td><td>
+      <input type="color" value="${cfg.color || '#e87722'}" id="de-color" style="width:40px;height:22px;border:none;background:none;cursor:pointer;vertical-align:middle">
+    </td></tr>`;
+
+    const lw = cfg.lineWidth ?? 1.5;
+    html += `<tr><td style="color:#94a3b8">Line Width</td><td>
+      <input type="range" min="0" max="10" step="0.5" value="${lw}" id="de-lw" style="width:110px;vertical-align:middle">
+      <span id="de-lw-v" style="color:#ff8c37;margin-left:6px">${lw}px</span>
+    </td></tr>`;
+
+    html += `<tr><td style="color:#94a3b8">Line Style</td><td>
+      <select id="de-ls" style="background:#10131a;color:#f1f5f9;border:1px solid #2d3345;padding:3px 6px;border-radius:2px;font-family:inherit">
+        <option value="solid" ${(cfg.lineDash || 'solid') === 'solid' ? 'selected' : ''}>Solid</option>
+        <option value="dashed" ${(cfg.lineDash || '') === 'dashed' ? 'selected' : ''}>Dashed</option>
+        <option value="dotted" ${(cfg.lineDash || '') === 'dotted' ? 'selected' : ''}>Dotted</option>
+      </select>
+    </td></tr>`;
+  }
+
+  html += '</table>';
+
+  html += `<div style="display:flex;justify-content:space-between;margin-top:18px;border-top:1px solid #232736;padding-top:12px">
+    <button id="de-del" style="background:#331515;border:1px solid #6d2020;color:#ef5350;padding:5px 12px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px">Delete</button>
+    <div style="display:flex;gap:8px">
+      <button id="de-cancel" style="background:#1c202d;border:1px solid #2d3345;color:#cbd5e1;padding:5px 12px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px">Cancel</button>
+      <button id="de-ok" style="background:#2a1a08;border:1px solid #8c450a;color:#ff8c37;padding:5px 14px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:bold">Apply</button>
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+  modal.style.display = 'flex';
+
+  const bw = document.getElementById('de-border-width');
+  if (bw) bw.oninput = () => { document.getElementById('de-bw-v').textContent = bw.value + 'px'; };
+  const fo = document.getElementById('de-fill-opacity');
+  if (fo) fo.oninput = () => { document.getElementById('de-fo-v').textContent = fo.value + '%'; };
+  const lw = document.getElementById('de-lw');
+  if (lw) lw.oninput = () => { document.getElementById('de-lw-v').textContent = lw.value + 'px'; };
+
+  document.getElementById('de-ok').onclick = () => applyEdit(obj);
+  document.getElementById('de-del').onclick = () => { DM.selected = obj.id; deleteSelected(); modal.style.display = 'none'; };
+  document.getElementById('de-cancel').onclick = () => { modal.style.display = 'none'; };
+}
+
+function applyEdit(obj) {
+  const cfg = obj.config || {};
+
+  if (obj.type === 'rect') {
+    cfg.borderColor = document.getElementById('de-border-color')?.value || '#3b82f6';
+    cfg.borderWidth = parseFloat(document.getElementById('de-border-width')?.value || '2');
+    cfg.borderDash  = document.getElementById('de-border-dash')?.value || 'solid';
+    cfg.fillColor   = document.getElementById('de-fill-color')?.value || cfg.borderColor;
+    const fo = parseInt(document.getElementById('de-fill-opacity')?.value || '15');
+    cfg.fillOpacity = fo / 100;
+  } else if (obj.type === 'longshort') {
+    cfg.direction    = document.getElementById('de-dir')?.value || 'long';
+    cfg.targetColor  = document.getElementById('de-target-color')?.value || '#26a69a';
+    cfg.stopColor    = document.getElementById('de-stop-color')?.value || '#ef5350';
+    cfg.lineWidth    = parseFloat(document.getElementById('de-lw')?.value || '1');
+    cfg.showText     = document.getElementById('de-show-text')?.checked || false;
+  } else if (obj.type === 'fibo') {
+    cfg.lineWidth = parseFloat(document.getElementById('de-lw')?.value || '1');
+    cfg.lineDash  = document.getElementById('de-ls')?.value || 'solid';
+    const inputs = document.querySelectorAll('[data-fibo-idx]');
+    const cols   = document.querySelectorAll('[data-fibo-col]');
+    const newLvls = [];
+    const newCols = {};
+    inputs.forEach((inp, idx) => {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) {
+        newLvls.push(v);
+        newCols[String(v)] = cols[idx]?.value || '#ffffff';
+      }
+    });
+    newLvls.sort((a, b) => a - b);
+    cfg.levels = newLvls;
+    cfg.levelColors = newCols;
+  } else {
+    cfg.color     = document.getElementById('de-color')?.value || '#e87722';
+    cfg.lineWidth = parseFloat(document.getElementById('de-lw')?.value || '1.5');
+    cfg.lineDash  = document.getElementById('de-ls')?.value || 'solid';
+  }
+
+  obj.config = cfg;
+  saveToolConfig(obj.type, cfg);
+
+  document.getElementById('draw-edit-modal').style.display = 'none';
+  drawPersist();
+  render();
+}
+
+function addFiboLevel() {
+  if (!window._editObj) return;
+  if (!window._editObj.config) window._editObj.config = getToolConfig('fibo');
+  window._editObj.config.levels.push(0.786);
+  if (!window._editObj.config.levelColors) window._editObj.config.levelColors = {};
+  window._editObj.config.levelColors['0.786'] = '#e040fb';
+  openEditModal(window._editObj);
+}
+
+function removeFiboLevel(i) {
+  if (!window._editObj || !window._editObj.config?.levels) return;
+  window._editObj.config.levels.splice(i, 1);
+  openEditModal(window._editObj);
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// INTERACTION — ported from Footprint.tsx's camera model:
+//   • Drag/wheel over the PRICE AXIS (right strip)  → vertical ZOOM
+//   • Drag/wheel over the TIME AXIS (bottom strip)   → horizontal ZOOM (drag)
+//     — wheel over the time axis or main area both zoom horizontal
+//   • Drag over the MAIN CHART AREA                  → free 2D PAN (x AND y)
+// Zone priority matches the reference exactly: price-axis check first,
+// then time-axis, then main area.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+let dragStartZone = 'main'; // 'main', 'volume', or 'cvd'
+
+function updateCursor() {
+  if (DM.activeTool) { cv.style.cursor = 'crosshair'; return; }
+  if (isDraggingDraw && DM.dragState?.handle) { cv.style.cursor = DM.dragState.handle.cursor || 'pointer'; return; }
+  if (isDraggingDraw) { cv.style.cursor = 'grabbing'; return; }
+  if (DM.hoveredId) { cv.style.cursor = 'pointer'; return; }
+
+  if (dragMode === 'zoomY' || dragMode === 'resizeVol' || dragMode === 'resizeCvd') { cv.style.cursor = 'ns-resize'; return; }
+  if (dragMode === 'zoomX') { cv.style.cursor = 'ew-resize'; return; }
+  if (dragMode === 'pan')   { cv.style.cursor = 'grabbing';  return; }
+  
+  // Check if mouse is hovering near horizontal pane separators for resizing
+  const W = CW();
+  if (mx >= 0 && mx < W) {
+    if (indicators.volume && Math.abs(my - VT()) <= 4) { cv.style.cursor = 'ns-resize'; return; }
+    if (indicators.cvd && Math.abs(my - CVDT()) <= 4) { cv.style.cursor = 'ns-resize'; return; }
+  }
+  
+  if (inPA(mx))      cv.style.cursor = 'ns-resize';
+  else if (inTA(my)) cv.style.cursor = 'ew-resize';
+  else               cv.style.cursor = 'crosshair';
+}
+
+function stopMomentum() { if (momentumRAF) { cancelAnimationFrame(momentumRAF); momentumRAF = null; } }
+
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  stopMomentum();
+  if (inPA(mx)) {
+    const factor = e.deltaY > 0 ? 1.1 : 0.9;
+    if (my < MH()) {
+      zoomV(factor);
+    } else if (indicators.volume && my >= VT() && my < VT() + VH()) {
+      volMultiplier = Math.max(0.05, Math.min(20, volMultiplier * factor));
+    } else if (indicators.cvd && my >= CVDT() && my < CVDT() + CVDH()) {
+      cvdMultiplier = Math.max(0.05, Math.min(20, cvdMultiplier * factor));
+    }
+  } else {
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    zoomHAtX(mx, factor);
+  }
+  render();
+}, { passive: false });
+
+cv.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  
+  const W = CW();
+  if (mx >= 0 && mx < W) {
+    // Priority 1: resizable separators check
+    if (indicators.volume && Math.abs(my - VT()) <= 4) {
+      dragMode = 'resizeVol';
+      lastMX = e.clientX; lastMY = e.clientY;
+      updateCursor();
+      return;
+    }
+    if (indicators.cvd && Math.abs(my - CVDT()) <= 4) {
+      dragMode = 'resizeCvd';
+      lastMX = e.clientX; lastMY = e.clientY;
+      updateCursor();
+      return;
+    }
+  }
+
+  // Priority 2: Technical analysis drawing creation or selection
+  if (DM.activeTool) {
+    if (drawMouseDown(e)) return;
+  }
+  if (selectMouseDown(e)) return;
+
+  stopMomentum();
+  
+  if (inPA(mx)) {
+    dragMode = 'zoomY';
+    if (my < MH()) {
+      dragStartZone = 'main';
+    } else if (indicators.volume && my >= VT() && my < VT() + VH()) {
+      dragStartZone = 'volume';
+    } else if (indicators.cvd && my >= CVDT() && my < CVDT() + CVDH()) {
+      dragStartZone = 'cvd';
+    }
+  } else if (inTA(my)) {
+    dragMode = 'zoomX';
+  } else {
+    dragMode = 'pan';
+  }
+  
+  lastMX = e.clientX; lastMY = e.clientY;
+  lastMoveT = performance.now(); lastMoveX = e.clientX; velX = 0;
+  
+  if (dragMode === 'pan' && bars.length) {
+    const pr = calcPR();
+    if (psCtr  === null) psCtr  = (pr.lo + pr.hi) / 2;
+    if (psHalf === null) psHalf = (pr.hi - pr.lo) / 2;
+  }
+  updateCursor();
+});
+
+cv.addEventListener('contextmenu', e => {
+  if (DM.activeTool === 'path' && DM.drawing) {
+    e.preventDefault();
+    if (DM.drawing.points.length > 2) {
+      DM.drawing.points.pop();
+      finalizeDrawing();
+    } else {
+      DM.drawing = null;
+      drawInProgress = false;
+      setActiveTool(null);
+      render();
+    }
+    return;
+  }
+  if (DM.drawing) {
+    e.preventDefault();
+    DM.drawing = null;
+    drawInProgress = false;
+    setActiveTool(null);
+    render();
+  }
+});
+
+document.addEventListener('mousemove', e => {
+  const r = cv.getBoundingClientRect();
+  mx = e.clientX - r.left; my = e.clientY - r.top;
+
+  if (DM.drawing) {
+    drawMouseMove(e);
+    return;
+  }
+  if (isDraggingDraw) {
+    selectMouseMove(e);
+    return;
+  }
+  updateHover(e);
+
+  if (dragMode) {
+    const dx = e.clientX - lastMX, dy = e.clientY - lastMY;
+    lastMX = e.clientX; lastMY = e.clientY;
+
+    if (dragMode === 'resizeVol') {
+      const ch = CH();
+      const limitBottom = indicators.cvd ? CVDT() : ch;
+      const newH = limitBottom - my;
+      volPaneHeight = Math.max(30, Math.min(ch * 0.45, newH));
+    } else if (dragMode === 'resizeCvd') {
+      const ch = CH();
+      const newH = ch - my;
+      cvdPaneHeight = Math.max(30, Math.min(ch * 0.45, newH));
+    } else if (dragMode === 'zoomY') {
+      const zoomFactor = 1 + dy * 0.01;
+      if (dragStartZone === 'main') {
+        zoomV(zoomFactor);
+      } else if (dragStartZone === 'volume') {
+        volMultiplier = Math.max(0.05, Math.min(20, volMultiplier * zoomFactor));
+      } else if (dragStartZone === 'cvd') {
+        cvdMultiplier = Math.max(0.05, Math.min(20, cvdMultiplier * zoomFactor));
+      }
+    } else if (dragMode === 'zoomX') {
+      zoomH(1 + dx * 0.01);
+    } else { // 'pan'
+      panH(dx);
+      panV(dy);
+      const now = performance.now(), dt = now - lastMoveT;
+      if (dt > 0) velX = 0.7 * velX + 0.3 * ((e.clientX - lastMoveX) / dt);
+      lastMoveT = now; lastMoveX = e.clientX;
+    }
+  }
+  render();
+  updateCursor();
+});
+
+document.addEventListener('mouseup', e => {
+  if (DM.drawing && drawInProgress) {
+    if (drawMouseUp(e)) return;
+  }
+  if (isDraggingDraw) {
+    selectMouseUp();
+    return;
+  }
+
+  if (e.button !== 0) return;
+  const wasPan = dragMode === 'pan';
+  dragMode = null;
+  updateCursor();
+  if (wasPan && Math.abs(velX) > 0.04) startMomentum();
+});
+
+cv.addEventListener('mouseleave', () => {
+  if (!dragMode && !DM.drawing && !isDraggingDraw) { mx = -1; my = -1; document.getElementById('ohlcv-ov').innerHTML = ''; render(); }
+  updateCursor();
+});
+cv.addEventListener('dblclick', e => {
+  if (handleDrawDblClick(e)) return;
+  // Double-click price axis OR main chart area → reset Y to auto-fit
+  if (inPA(mx) || (!inTA(my))) { resetPS(); render(); }
+});
+document.getElementById('btn-go').addEventListener('click', () => { stopMomentum(); if (bars.length) { gotoLatest(); render(); } });
+
+/** Kinetic deceleration after a pan-drag release — bonus on top of the reference. */
+function startMomentum() {
+  let v = velX, lastT = performance.now();
+  function step(t) {
+    const dt = t - lastT; lastT = t;
+    if (Math.abs(v) < 0.006) { momentumRAF = null; return; }
+    panH(v * dt);
+    v *= Math.pow(0.93, dt / 16.67);
+    render();
+    momentumRAF = requestAnimationFrame(step);
+  }
+  momentumRAF = requestAnimationFrame(step);
+}
+
+/** Keyboard navigation — arrows pan, +/- zoom, drawing hotkeys. */
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    deleteSelected();
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (DM.drawing) {
+      DM.drawing = null;
+      drawInProgress = false;
+      render();
+    } else if (DM.selected) {
+      DM.selected = null;
+      render();
+    }
+    setActiveTool(null);
+    return;
+  }
+  if (e.key === 'l' || e.key === 'L') {
+    setActiveTool(DM.activeTool === 'line' ? null : 'line');
+    return;
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    setActiveTool(DM.activeTool === 'rect' ? null : 'rect');
+    return;
+  }
+  if (e.key === 'f' || e.key === 'F') {
+    setActiveTool(DM.activeTool === 'fibo' ? null : 'fibo');
+    return;
+  }
+  if (e.key === 'p' || e.key === 'P') {
+    setActiveTool(DM.activeTool === 'path' ? null : 'path');
+    return;
+  }
+  if (e.key === 's' || e.key === 'S') {
+    setActiveTool(DM.activeTool === 'longshort' ? null : 'longshort');
+    return;
+  }
+
+  if (!bars.length) return;
+  switch (e.key) {
+    case 'ArrowLeft':  stopMomentum(); panH(50);  render(); break;
+    case 'ArrowRight': stopMomentum(); panH(-50); render(); break;
+    case '+': case '=': stopMomentum(); zoomH(1.15);   render(); break;
+    case '-': case '_': stopMomentum(); zoomH(1/1.15); render(); break;
+  }
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DATA LOADING
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let pollTimer = null;
+
+function setLoading(on, msg = '') {
+  loading = on;
+  document.getElementById('ld-ov').classList.toggle('off', !on);
+  if (msg) document.getElementById('ld-msg').textContent = msg;
+}
+
+async function fetchCandles() { const res = await fetch('/api/candles'); return res.json(); }
+
+async function fetchCVD() {
+  if (!indicators.cvd) return;
+  try {
+    const res = await fetch(`/api/cvd?symbol=${sym}&interval=${tf}`);
+    const d = await res.json();
+    if (d.data) {
+      cvdData = d.data;
+      cvdExchangeStatus = d.exchanges || [];
+    }
+  } catch (e) {
+    console.error('[CVD fetch error]', e);
+  }
+}
+
+function applyData(d, isChange) {
+  const prevLen = bars.length;
+  bars      = d.bars;
+  sym       = d.symbol;
+  tf        = d.timeframe;
+  tfSec     = d.tfSec ?? 3600;
+  nextClose = d.nextClose;
+
+  bufState.reachedStart = !!d.reachedStart;
+  bufState.target       = d.bufferTarget ?? 5000;
+
+  if (isChange || prevLen === 0) initCamera(); else shiftCam(prevLen);
+
+  document.getElementById('sym-lbl').textContent = sym + '.P';
+  activateTF(tf);
+  document.getElementById('sb-bars').textContent = `Bars: ${bars.length}`;
+  document.getElementById('sb-r').textContent    = 'Updated ' + new Date().toLocaleTimeString();
+
+  const last = bars[bars.length - 1];
+  if (last) {
+    const col = last.close >= last.open ? '#26a69a' : '#ef5350';
+    document.getElementById('sb-last').innerHTML = `Last: <span style="color:${col}">${fmtP(last.close)}</span>`;
+    const { L, R } = visRange(); const sl = bars.slice(L, R + 1);
+    let lo = Infinity, hi = -Infinity;
+    sl.forEach(b => { if (b.low < lo) lo = b.low; if (b.high > hi) hi = b.high; });
+    if (lo < Infinity) document.getElementById('sb-range').textContent = `Range: ${fmtP(lo)} – ${fmtP(hi)}`;
+  }
+
+  document.getElementById('tv-dot').textContent = 'TV â—';
+  document.getElementById('tv-dot').className   = '';
+  document.getElementById('tv-dot').style.cssText = 'font-size:9px;padding:2px 8px;border-radius:2px;background:#0e1e0e;color:#287a28;border:1px solid #183818';
+
+  hvnDirty = true; // Mark HVN for recomputation with new bars
+
+  if (isChange || prevLen === 0 || !DM._loadedSym || DM._loadedSym !== sym) {
+    DM._loadedSym = sym;
+    drawLoad(sym);
+  }
+
+  fetch('/api/trade-agg')
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok && res.symbol === sym && res.timeframe === tf) {
+        tradeAgg = res.data || {};
+      }
+      // Fetch HA detections alongside trade data
+      if (indicators.ha) fetchHA();
+      if (indicators.cvd) {
+        fetchCVD().then(() => render());
+      } else {
+        render();
+      }
+    })
+    .catch(() => {
+      if (indicators.ha) fetchHA();
+      if (indicators.cvd) {
+        fetchCVD().then(() => render());
+      } else {
+        render();
+      }
+    });
+}
+
+async function pollUntilReady(isChange = false, gen = loadGen) {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    // If a newer load has started, stop this poll immediately
+    if (gen !== loadGen) { clearInterval(pollTimer); return; }
+    try {
+      const d = await fetchCandles();
+      if (!d.ok) return;
+      // Discard response if its symbol/TF don't match what we requested
+      if (d.symbol !== sym && bars.length === 0) {
+        // Server is still loading — keep waiting
+      }
+      if (d.loading) { setLoading(true, d.loadMsg || 'Syncing\u2026'); return; }
+      // Only apply if this is still the current generation
+      if (gen !== loadGen) { clearInterval(pollTimer); return; }
+      clearInterval(pollTimer);
+      setLoading(false);
+      applyData(d, isChange);
+    } catch {}
+  }, 400);
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// LIVE TICK — Bybit WebSocket via SSE (per-tick, no delay)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let sse = null;
+
+function startSSE() {
+  if (sse) sse.close();
+  sse = new EventSource('/api/tick');
+
+  sse.onmessage = e => {
+    const tick = JSON.parse(e.data);
+    if (!bars.length || !tick) return;
+
+    // Ignore ticks from a previous pair/TF subscription. The server tags
+    // every broadcast with symbol+timeframe so we can detect stale ticks
+    // that arrive in the ~1-2 s gap after a pair/TF switch.
+    if (tick.symbol !== sym || tick.timeframe !== tf) return;
+
+    const dot = document.getElementById('bw-dot');
+    dot.textContent = 'WS â—'; dot.className = 'live';
+    dot.style.cssText = 'font-size:9px;padding:2px 8px;border-radius:2px;background:#120800;color:#e87722;border:1px solid #5a2e06;letter-spacing:.5px';
+    dot.classList.add('live');
+
+    const last = bars[bars.length - 1];
+    if (tick.time === last.time) {
+      last.close = tick.close;
+      if (tick.high > last.high) last.high = tick.high;
+      if (tick.low  < last.low)  last.low  = tick.low;
+      last.volume = tick.volume;
+      nextClose = tick.time + tfSec;
+    } else if (tick.time > last.time) {
+      const wasAtEdge = bx(bars.length - 1) <= CW() + barW * 2;
+      bars.push({ time: tick.time, open: tick.open, high: tick.high, low: tick.low, close: tick.close, volume: tick.volume });
+      nextClose = tick.time + tfSec;
+      if (wasAtEdge) leftBar += 1;
+      
+      // Auto refresh CVD history on bar close to capture multi-exchange final alignment
+      if (indicators.cvd) {
+        fetchCVD();
+      }
+    }
+
+    const col = tick.close >= tick.open ? '#26a69a' : '#ef5350';
+    document.getElementById('sb-last').innerHTML = `Last: <span style="color:${col}">${fmtP(tick.close)}</span>`;
+    render();
+  };
+
+  sse.onerror = () => {
+    document.getElementById('bw-dot').textContent = 'WS ○';
+    document.getElementById('bw-dot').className   = '';
+  };
+}
+
+let sseTrades = null;
+
+function startTradeSSE() {
+  if (sseTrades) sseTrades.close();
+  sseTrades = new EventSource('/api/trades');
+
+  sseTrades.onmessage = e => {
+    const trade = JSON.parse(e.data);
+    if (!bars.length || !trade) return;
+    if (trade.symbol !== sym || trade.timeframe !== tf) return;
+
+    const candleTime = Math.floor(trade.time / tfSec) * tfSec;
+    if (!tradeAgg[candleTime]) {
+      tradeAgg[candleTime] = {};
+    }
+
+    const bucketSize = getBucketSize(trade.price);
+    const bucket = Math.floor(trade.price / bucketSize) * bucketSize;
+
+    if (!tradeAgg[candleTime][bucket]) {
+      tradeAgg[candleTime][bucket] = { buy: 0, sell: 0 };
+    }
+    const lv = tradeAgg[candleTime][bucket];
+    if (trade.side === 'Buy') {
+      lv.buy += trade.volume;
+    } else {
+      lv.sell += trade.volume;
+    }
+    render();
+  };
+
+  sseTrades.onerror = () => {};
+}
+
+setInterval(() => { if (bars.length) render(); }, 1000);
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// LOAD trigger — symbol/TF switch (sync only, fast)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const TF_LBL = {'1':'1m','5':'5m','15':'15m','30':'30m','60':'1H','240':'4H','D':'1D','W':'1W'};
+
+// Track which load request is "current" — incremented on each switch.
+// Any poll or tick that carries an older generation is silently discarded.
+let loadGen = 0;
+
+async function loadData(symbol, timeframe) {
+  stopMomentum();
+  clearVpCache(); // discard old sub-bar data before switching symbol/TF
+
+  if (sym !== symbol) {
+    tradeAgg = {};
+    haData = [];
+    hvnZones = [];
+    hvnPeriods = [];
+  }
+
+  // ── Immediately clear stale data so old-pair bars never show ──────────
+  bars  = [];
+  nextClose = 0;
+  bufState.busy         = false;
+  bufState.reachedStart = false;
+  bufState.target       = 5000;
+  bufState.gen++;          // â† invalidate any in-flight buffer-more for the old pair
+  resetPS();           // reset Y camera
+  // Don't call initCamera() yet — wait until real data arrives
+
+  const gen = ++loadGen; // capture generation for this specific load request
+
+  setLoading(true, `Syncing ${symbol}.P \u00b7 ${TF_LBL[timeframe] || timeframe}\u2026`);
+  await fetch('/api/load', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbol, timeframe })
+  });
+  pollUntilReady(true, gen);
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DROPDOWNS (SYMBOL & INDICATOR)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let allPairs = [], activeSym = 'BTCUSDT', dropOpen = false, indDropOpen = false;
+
+document.getElementById('sb2').addEventListener('click', e => {
+  e.stopPropagation(); dropOpen = !dropOpen;
+  document.getElementById('sp').classList.toggle('open', dropOpen);
+  if (dropOpen) {
+    if (indDropOpen) { indDropOpen = false; document.getElementById('ind-dd').classList.remove('open'); }
+    document.getElementById('sp-in').focus();
+    renderPairs('');
+  }
+});
+
+document.getElementById('ind-btn').addEventListener('click', e => {
+  e.stopPropagation(); indDropOpen = !indDropOpen;
+  document.getElementById('ind-dd').classList.toggle('open', indDropOpen);
+  if (indDropOpen && dropOpen) { dropOpen = false; document.getElementById('sp').classList.remove('open'); }
+});
+
+document.addEventListener('click', () => {
+  if (dropOpen) { dropOpen = false; document.getElementById('sp').classList.remove('open'); }
+  if (indDropOpen) { indDropOpen = false; document.getElementById('ind-dd').classList.remove('open'); }
+});
+
+document.getElementById('sp-in').addEventListener('input', e => renderPairs(e.target.value.trim()));
+document.getElementById('sp-in').addEventListener('click', e => e.stopPropagation());
+document.getElementById('sp-in').addEventListener('keydown', e => { if (e.key === 'Escape') { dropOpen = false; document.getElementById('sp').classList.remove('open'); } });
+
+document.querySelectorAll('.ind-item').forEach(el => {
+  el.addEventListener('click', async e => {
+    // Ignore toggling when the user clicks the config button inside the item
+    if (e.target.closest('.ind-cfg-btn')) return;
+
+    e.stopPropagation();
+    const ind = el.dataset.ind;
+
+    indicators[ind] = !indicators[ind];
+    el.querySelector('.ind-sw').classList.toggle('on', indicators[ind]);
+    
+    if (ind === 'cvd' && indicators.cvd) {
+      setLoading(true, 'Fetching CVD Spot data...');
+      await fetchCVD();
+      setLoading(false);
+    }
+
+    if (ind === 'ha' && indicators.ha) {
+      await fetchHA();
+    }
+
+    if (ind === 'hvn' && indicators.hvn) {
+      hvnDirty = true;
+    }
+    
+    render();
+  });
+});
+
+// ── INDICATOR CONFIGURATION MODAL (Bubble) ──
+const modal = document.getElementById('cfg-modal');
+const minTokenInput = document.getElementById('cfg-min-token');
+const multiplierSlider = document.getElementById('cfg-multiplier');
+const valMultiplier = document.getElementById('val-multiplier');
+
+// Open modal
+document.querySelectorAll('.ind-cfg-btn:not(#cvd-cfg-btn):not(#hvn-cfg-btn)').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    // Load current config to UI inputs
+    minTokenInput.value = bubbleConfig.minToken || '';
+    multiplierSlider.value = bubbleConfig.multiplier;
+    valMultiplier.textContent = parseFloat(bubbleConfig.multiplier).toFixed(1) + 'x';
+    
+    // Open
+    modal.classList.add('open');
+    // Close indicators dropdown
+    indDropOpen = false;
+    document.getElementById('ind-dd').classList.remove('open');
+  });
+});
+
+// Close modal
+document.getElementById('cfg-close').addEventListener('click', () => {
+  modal.classList.remove('open');
+});
+modal.addEventListener('click', e => {
+  if (e.target === modal) modal.classList.remove('open');
+});
+
+// Auto-apply: Min Token input
+minTokenInput.addEventListener('input', () => {
+  const v = parseFloat(minTokenInput.value) || 0;
+  bubbleConfig.minToken = Math.max(0, v);
+  localStorage.setItem('hf_bubble_minToken', bubbleConfig.minToken);
+  render();
+});
+
+// Auto-apply: Multiplier slider
+multiplierSlider.addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  bubbleConfig.multiplier = v;
+  valMultiplier.textContent = v.toFixed(1) + 'x';
+  localStorage.setItem('hf_bubble_multiplier', bubbleConfig.multiplier);
+  render();
+});
+
+// ── HVN CONFIGURATION MODAL ──
+const hvnModal = document.getElementById('hvn-cfg-modal');
+
+document.getElementById('hvn-cfg-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  // Load current config to UI
+  document.getElementById('hvn-anchor').value = hvnConfig.anchor;
+  document.getElementById('hvn-threshold').value = hvnConfig.threshold;
+  document.getElementById('val-hvn-threshold').textContent = hvnConfig.threshold + '%';
+  document.getElementById('hvn-rowticks').value = hvnConfig.rowTicks;
+  document.getElementById('hvn-maxzones').value = hvnConfig.maxZones;
+  document.getElementById('hvn-show-profile').checked = hvnConfig.showProfile !== false;
+  document.getElementById('hvn-poc').checked = hvnConfig.showPOC !== false;
+  document.getElementById('hvn-show-labels').checked = hvnConfig.showLabels !== false;
+  hvnModal.classList.add('open');
+  indDropOpen = false;
+  document.getElementById('ind-dd').classList.remove('open');
+});
+
+document.getElementById('hvn-cfg-close').addEventListener('click', () => hvnModal.classList.remove('open'));
+hvnModal.addEventListener('click', e => { if (e.target === hvnModal) hvnModal.classList.remove('open'); });
+
+// Auto-apply HVN config changes
+document.getElementById('hvn-anchor').addEventListener('change', e => {
+  hvnConfig.anchor = e.target.value;
+  localStorage.setItem('hf_hvn_anchor', hvnConfig.anchor);
+  hvnDirty = true; render();
+});
+document.getElementById('hvn-threshold').addEventListener('input', e => {
+  hvnConfig.threshold = parseInt(e.target.value);
+  document.getElementById('val-hvn-threshold').textContent = hvnConfig.threshold + '%';
+  localStorage.setItem('hf_hvn_threshold', hvnConfig.threshold);
+  hvnDirty = true; render();
+});
+document.getElementById('hvn-rowticks').addEventListener('input', e => {
+  hvnConfig.rowTicks = Math.max(1, parseInt(e.target.value) || 20);
+  localStorage.setItem('hf_hvn_rowTicks', hvnConfig.rowTicks);
+  hvnDirty = true; render();
+});
+document.getElementById('hvn-maxzones').addEventListener('input', e => {
+  hvnConfig.maxZones = Math.max(1, parseInt(e.target.value) || 15);
+  localStorage.setItem('hf_hvn_maxZones', hvnConfig.maxZones);
+  hvnDirty = true; render();
+});
+document.getElementById('hvn-show-profile').addEventListener('change', e => {
+  hvnConfig.showProfile = e.target.checked;
+  localStorage.setItem('hf_hvn_showProfile', hvnConfig.showProfile);
+  render();
+});
+document.getElementById('hvn-poc').addEventListener('change', e => {
+  hvnConfig.showPOC = e.target.checked;
+  localStorage.setItem('hf_hvn_showPOC', hvnConfig.showPOC);
+  render();
+});
+document.getElementById('hvn-show-labels').addEventListener('change', e => {
+  hvnConfig.showLabels = e.target.checked;
+  localStorage.setItem('hf_hvn_showLabels', hvnConfig.showLabels);
+  render();
+});
+
+// ── CVD CONFIGURATION MODAL ──
+const cvdModal = document.getElementById('cvd-cfg-modal');
+const cvdGrid = document.getElementById('cvd-exchanges-grid');
+let tempCvdExchanges = [...cvdConfig.exchanges]; // temporary edits
+
+function renderCvdCheckboxes() {
+  cvdGrid.innerHTML = '';
+  const activeCount = tempCvdExchanges.length;
+  
+  ALL_CVD_EXCHANGES.forEach(ex => {
+    const isChecked = tempCvdExchanges.includes(ex);
+    const isDisabled = isChecked && activeCount === 1;
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = `cvd-item-wrap${isDisabled ? ' disabled' : ''}`;
+    
+    wrapper.innerHTML = `
+      <input type="checkbox" class="cvd-cb" value="${ex}" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+      <span class="cvd-label">${ex}</span>
+    `;
+    
+    if (!isDisabled) {
+      wrapper.addEventListener('click', async (e) => {
+        const cb = wrapper.querySelector('.cvd-cb');
+        if (e.target !== cb) {
+          cb.checked = !cb.checked;
+          cb.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+    
+    const cb = wrapper.querySelector('.cvd-cb');
+    cb.addEventListener('change', async () => {
+      if (cb.checked) {
+        if (!tempCvdExchanges.includes(ex)) tempCvdExchanges.push(ex);
+      } else {
+        tempCvdExchanges = tempCvdExchanges.filter(x => x !== ex);
+      }
+      
+      // Auto-save changes immediately on toggle
+      cvdConfig.exchanges = [...tempCvdExchanges];
+      localStorage.setItem('hf_cvd_exchanges', JSON.stringify(cvdConfig.exchanges));
+      
+      try {
+        await fetch('/api/cvd/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exchanges: cvdConfig.exchanges })
+        });
+        await fetchCVD();
+        render();
+      } catch (e) {
+        console.error('[CVD Auto-save failed]', e);
+      }
+      
+      renderCvdCheckboxes();
+    });
+    
+    cvdGrid.appendChild(wrapper);
+  });
+}
+
+// Open CVD Modal (specifically for CVD config button, ignoring bubble config btn)
+document.getElementById('cvd-cfg-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  tempCvdExchanges = [...cvdConfig.exchanges];
+  renderCvdCheckboxes();
+  cvdModal.classList.add('open');
+  
+  // Close indicators dropdown
+  indDropOpen = false;
+  document.getElementById('ind-dd').classList.remove('open');
+});
+
+// Close CVD Modal
+document.getElementById('cvd-cfg-close').addEventListener('click', () => {
+  cvdModal.classList.remove('open');
+});
+cvdModal.addEventListener('click', e => {
+  if (e.target === cvdModal) cvdModal.classList.remove('open');
+});
+
+
+
+
+
+function renderPairs(q) {
+  const list = document.getElementById('sp-lst'); list.innerHTML = '';
+  const items = q ? allPairs.filter(s => s.symbol.toLowerCase().includes(q.toLowerCase()) || s.base.toLowerCase().includes(q.toLowerCase())) : allPairs;
+  document.getElementById('sp-ct').textContent = items.length + ' pairs';
+  items.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'si' + (s.symbol === activeSym ? ' on' : '');
+    el.innerHTML = `<span class="sb3">${s.base}</span><span class="sq">/USDT</span><span class="sp2">.P</span>`;
+    el.addEventListener('click', e => { e.stopPropagation(); activeSym = s.symbol; dropOpen = false; document.getElementById('sp').classList.remove('open'); loadData(s.symbol, tf); });
+    list.appendChild(el);
+  });
+}
+
+async function initPairs() { try { const r = await fetch('/api/pairs'); const d = await r.json(); allPairs = d.ok ? d.pairs : []; } catch { allPairs = []; } }
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// TF BUTTONS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function activateTF(t) { document.querySelectorAll('.tf').forEach(b => b.classList.toggle('on', b.dataset.tf === t)); }
+document.querySelectorAll('.tf').forEach(btn => { btn.addEventListener('click', () => { const newTF = btn.dataset.tf; if (newTF === tf) return; loadData(sym || 'BTCUSDT', newTF); }); });
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// VOLUME PROFILE — sub-bar fetch engine
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+/**
+ * Debounced entry point — called from render() to keep VP data fresh.
+ * Waits 250 ms after the last render before firing the actual fetch,
+ * which avoids hammering the server during fast pan/zoom gestures.
+ */
+function scheduleVpFetch() {
+  if (vpFetchTimer) clearTimeout(vpFetchTimer);
+  vpFetchTimer = setTimeout(doVpFetch, 250);
+}
+
+async function doVpFetch() {
+  const subIv = vpSubIv(tf);
+  if (!subIv || barW < VP_MIN_BW || !bars.length || vpFetching) return;
+
+  const { L, R } = visRange();
+  if (L > R) return;
+
+  const startSec = bars[L].time;
+  const endSec   = bars[R].time + tfSec;
+  const cacheKey = `${sym}:${subIv}`;
+  const covered  = vpCovered.get(cacheKey) || { min: Infinity, max: -Infinity };
+
+  // Skip if visible range is already fully covered
+  if (startSec >= covered.min && endSec <= covered.max + 60) return;
+
+  vpFetching = true;
+  try {
+    // Fetch in segments if needed (covered range may have gaps)
+    const fetchStart = Math.min(startSec, covered.min === Infinity ? startSec : covered.min);
+    const fetchEnd   = Math.max(endSec,   covered.max === -Infinity ? endSec : covered.max);
+
+    const url = `/api/sub-bars?symbol=${encodeURIComponent(sym)}&interval=${subIv}&start=${startSec}&end=${endSec}`;
+    const j   = await fetch(url).then(r => r.json());
+    if (!j.ok || !j.bars.length) return;
+
+    // Merge into cache (dedup by time)
+    const existing = vpCache.get(cacheKey) || [];
+    const seen     = new Set(existing.map(b => b.time));
+    const fresh    = j.bars.filter(b => !seen.has(b.time));
+    if (fresh.length) {
+      const merged = [...existing, ...fresh].sort((a, b) => a.time - b.time);
+      vpCache.set(cacheKey, merged);
+    }
+
+    // Expand covered range
+    vpCovered.set(cacheKey, {
+      min: Math.min(covered.min, startSec),
+      max: Math.max(covered.max, endSec)
+    });
+
+    render();
+  } catch (e) {
+    console.warn('[VP]', e.message);
+  } finally {
+    vpFetching = false;
+  }
+}
+
+/**
+ * Clear VP cache when switching symbol or timeframe.
+ * Called automatically whenever a new load is applied.
+ */
+function clearVpCache() {
+  vpCache.clear();
+  vpCovered.clear();
+  if (vpFetchTimer) { clearTimeout(vpFetchTimer); vpFetchTimer = null; }
+  vpFetching = false;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// FORMAT HELPERS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function niceStep(r, t) { const raw = r / t, mag = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / mag; return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag; }
+function fmtP(p) {
+  if (p == null || isNaN(p)) return '—';
+  if (p >= 100000) return p.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (p >= 10000)  return p.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  if (p >= 1000)   return p.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  if (p >= 1)      return p.toFixed(4);
+  if (p >= 0.001)  return p.toFixed(6);
+  if (p >= 0.0001) return p.toFixed(7);
+  return p.toFixed(8); // e.g. 1000PEPE ~0.0000128
+}
+function fmtV(v) { if (!v) return '0'; if (v >= 1e9) return (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M'; if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K'; return v.toFixed(2); }
+function fmtCd(rem) { const h = Math.floor(rem / 3600), m = Math.floor((rem % 3600) / 60), s = Math.floor(rem % 60); return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtT(ts, tf2) {
+  // All labels shown in WIB (UTC+7) — add offset before using UTC accessors.
+  const d = new Date((ts + WIB_OFFSET_S) * 1000);
+  const H = d.getUTCHours(), M = d.getUTCMinutes();
+  const HS = H.toString().padStart(2,'0'), MS = M.toString().padStart(2,'0');
+  const day = d.getUTCDate(), mon = MON[d.getUTCMonth()], yr = d.getUTCFullYear();
+  if (tf2 === 'W' || tf2 === 'D') return `${day} ${mon} ${yr}`;
+  // For intraday: show date label at WIB-midnight (day boundary), month label
+  // at the 1st of the month; otherwise show HH:MM.
+  if (H === 0 && M === 0) return day === 1 ? `${mon} ${yr}` : `${day} ${mon}`;
+  return `${HS}:${MS}`;
+}
+function fmtTD(ts, tf2) {
+  const d = new Date((ts + WIB_OFFSET_S) * 1000);
+  const dd = d.getUTCDate().toString().padStart(2,'0');
+  const H  = d.getUTCHours().toString().padStart(2,'0');
+  const M  = d.getUTCMinutes().toString().padStart(2,'0');
+  const yr = d.getUTCFullYear();
+  if (tf2 === 'D' || tf2 === 'W') return `${dd} ${MON[d.getUTCMonth()]} ${yr}`;
+  return `${dd} ${MON[d.getUTCMonth()]} ${yr}  ${H}:${M} WIB`;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ECONOMIC CALENDAR SIDEBAR
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const calSidebar  = document.getElementById('cal-sidebar');
+const calDrag     = document.getElementById('cal-drag');
+const calList     = document.getElementById('cal-list');
+const calRefresh  = document.getElementById('cal-refresh');
+const calClose    = document.getElementById('cal-close');
+const calStatus   = document.getElementById('cal-status');
+const calFilters  = document.getElementById('cal-filters');
+const navCalBtn   = document.getElementById('nav-watch');
+
+let calEvents     = [];
+let calFilter     = 'all';
+let calOpen       = false;
+let calDragging   = false;
+
+// Toggle sidebar
+function toggleCalendar(forceOpen) {
+  calOpen = forceOpen !== undefined ? forceOpen : !calOpen;
+  if (calOpen) {
+    calSidebar.classList.add('open');
+    if (!calSidebar.style.width || calSidebar.style.width === '0px') {
+      calSidebar.style.width = '320px';
+    }
+    navCalBtn.classList.add('active');
+    navCalBtn.title = 'Economic Calendar (click to close)';
+    fetchCalendar(); // refresh from server cache whenever opened
+  } else {
+    calSidebar.classList.remove('open');
+    calSidebar.style.width = '0px';
+    navCalBtn.classList.remove('active');
+    navCalBtn.title = 'Economic Calendar';
+  }
+}
+
+navCalBtn.addEventListener('click', () => toggleCalendar());
+calClose.addEventListener('click', () => toggleCalendar(false));
+
+// Drag resize
+calDrag.addEventListener('mousedown', e => {
+  e.preventDefault();
+  calDragging = true;
+  calDrag.classList.add('active');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', e => {
+  if (!calDragging) return;
+  const appRect = document.getElementById('app').getBoundingClientRect();
+  const newW = appRect.right - e.clientX;
+  const clamped = Math.max(0, Math.min(500, newW));
+  if (clamped < 80) {
+    calSidebar.style.width = '0px';
+    calSidebar.classList.remove('open');
+    calOpen = false;
+    navCalBtn.classList.remove('active');
+  } else {
+    calSidebar.style.width = clamped + 'px';
+    calSidebar.classList.add('open');
+    calOpen = true;
+    navCalBtn.classList.add('active');
+  }
+});
+document.addEventListener('mouseup', () => {
+  if (!calDragging) return;
+  calDragging = false;
+  calDrag.classList.remove('active');
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
+
+// Fetch calendar data
+async function fetchCalendar() {
+  calRefresh.classList.add('spin');
+  calStatus.textContent = 'updating...';
+  try {
+    const r = await fetch('/api/calendar');
+    const d = await r.json();
+    calEvents = d.events || [];
+    if (d.fetchedAt) {
+      const ago = Math.round((Date.now() - d.fetchedAt) / 60000);
+      calStatus.textContent = ago < 1 ? 'just now' : ago + 'm ago';
+    }
+    if (d.error) calStatus.textContent = 'error';
+    renderCalendar();
+  } catch (e) {
+    calStatus.textContent = 'offline';
+  }
+  calRefresh.classList.remove('spin');
+}
+
+calRefresh.addEventListener('click', async () => {
+  calRefresh.classList.add('spin');
+  calStatus.textContent = 'refreshing...';
+  try {
+    const r = await fetch('/api/calendar/refresh', { method: 'POST' });
+    const d = await r.json();
+    calEvents = d.events || [];
+    calStatus.textContent = 'just now';
+    renderCalendar();
+  } catch (e) {
+    calStatus.textContent = 'error';
+  }
+  calRefresh.classList.remove('spin');
+});
+
+// Filter
+calFilters.addEventListener('click', e => {
+  const chip = e.target.closest('.cal-chip');
+  if (!chip) return;
+  calFilters.querySelectorAll('.cal-chip').forEach(c => c.classList.remove('on'));
+  chip.classList.add('on');
+  calFilter = chip.dataset.impact;
+  renderCalendar();
+});
+
+// Render calendar events
+function renderCalendar() {
+  const WIB_OFF = 7 * 3600000; // UTC+7
+  const now = Date.now();
+  const todayStr = new Date(now + WIB_OFF).toISOString().slice(0, 10);
+
+  // Filter by impact
+  let filtered = calEvents;
+  if (calFilter !== 'all') {
+    const lvl = parseInt(calFilter);
+    filtered = calEvents.filter(ev => ev.impact === lvl);
+  }
+
+  if (!filtered.length) {
+    calList.innerHTML = '<div class="cal-empty">No events</div>';
+    return;
+  }
+
+  // Group by date
+  const groups = new Map();
+  for (const ev of filtered) {
+    let dateKey;
+    if (ev.timestamp) {
+      const d = new Date(ev.timestamp + WIB_OFF);
+      dateKey = d.toISOString().slice(0, 10);
+    } else {
+      dateKey = 'unknown';
+    }
+    if (!groups.has(dateKey)) groups.set(dateKey, []);
+    groups.get(dateKey).push(ev);
+  }
+
+  let html = '';
+  for (const [dateKey, events] of groups) {
+    const isToday = dateKey === todayStr;
+    let label;
+    if (dateKey === 'unknown') {
+      label = 'Unknown Date';
+    } else {
+      const d = new Date(dateKey + 'T00:00:00Z');
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      label = `${days[d.getUTCDay()]} ${d.getUTCDate()} ${mons[d.getUTCMonth()]}`;
+      if (isToday) label += ' • TODAY';
+    }
+    html += `<div class="cal-day-hdr${isToday ? ' today' : ''}">${label}</div>`;
+
+    for (const ev of events) {
+      // Urgency class
+      let urg = '';
+      if (ev.timestamp) {
+        const diffMin = (ev.timestamp - now) / 60000;
+        if (diffMin > 0 && diffMin <= 60) urg = ' soon';
+        else if (diffMin > 0 && diffMin <= 300) urg = ' upcoming';
+      }
+
+      // Time in WIB
+      let timeStr = ev.timeText || '-';
+      if (ev.timestamp && /^\d{1,2}:\d{2}$/.test(ev.timeText?.trim() || '')) {
+        const d = new Date(ev.timestamp + WIB_OFF);
+        timeStr = d.getUTCHours().toString().padStart(2,'0') + ':' + d.getUTCMinutes().toString().padStart(2,'0');
+      }
+
+      const ic = ev.impact || 0;
+      // Detect CPI / NFP events for USD impact indicator
+      const evNameLower = (ev.event || '').toLowerCase();
+      const isCpiNfp = evNameLower.includes('cpi') || evNameLower.includes('consumer price index')
+                     || evNameLower.includes('nonfarm payroll') || evNameLower.includes('non-farm payroll')
+                     || evNameLower.includes('nonfarm employment') || evNameLower.includes('non-farm employment');
+
+      html += `<div class="cal-ev${urg}">`;
+      html += `<span class="cal-time">${timeStr}</span>`;
+      html += `<span class="cal-impact i${ic}"><i></i><i></i><i></i></span>`;
+      html += `<div class="cal-body">`;
+      html += `<div class="cal-name">${escHtml(ev.event)}</div>`;
+
+      // Expandable detail section
+      html += `<div class="cal-detail">`;
+      html += `<div class="cal-detail-grid">`;
+      html += `<div class="cal-detail-cell"><div class="cal-detail-label">Prev</div><div class="cal-detail-value">${ev.previous || '—'}</div></div>`;
+      html += `<div class="cal-detail-cell"><div class="cal-detail-label">Forecast</div><div class="cal-detail-value">${ev.forecast || '—'}</div></div>`;
+      const actCls = ev.signal === 'good' ? ' good' : ev.signal === 'bad' ? ' bad' : '';
+      html += `<div class="cal-detail-cell"><div class="cal-detail-label">Actual</div><div class="cal-detail-value${actCls}">${ev.actual || '—'}</div></div>`;
+      html += `</div>`;
+
+      // USD impact signal for CPI / NFP
+      if (isCpiNfp && ev.actual && ev.forecast) {
+        const actNum = parseFloat(ev.actual.replace(/[^\d.\-]/g, ''));
+        const fctNum = parseFloat(ev.forecast.replace(/[^\d.\-]/g, ''));
+        if (!isNaN(actNum) && !isNaN(fctNum)) {
+          let sigCls, sigTxt;
+          if (actNum > fctNum)      { sigCls = 'bullish'; sigTxt = '▲ USD BULLISH'; }
+          else if (actNum < fctNum) { sigCls = 'bearish'; sigTxt = '▼ USD BEARISH'; }
+          else                      { sigCls = 'neutral'; sigTxt = 'â— NEUTRAL'; }
+          html += `<div class="cal-usd-signal ${sigCls}">${sigTxt}</div>`;
+        }
+      }
+
+      html += `</div>`; // close cal-detail
+      html += `</div></div>`; // close cal-body, cal-ev
+    }
+  }
+  calList.innerHTML = html;
+
+  // Click to expand/collapse
+  calList.querySelectorAll('.cal-ev').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('expanded'));
+  });
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// No periodic polling — server handles smart event-based refresh.
+// Frontend fetches from server cache on sidebar open + manual ↻ button.
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// INIT
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+(async () => {
+  await initPairs();
+  setLoading(true, 'Connecting to TradingView…');
+  pollUntilReady(false);
+  startSSE();
+  startTradeSSE();
+  fetchCalendar();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# ── Dependensi ─────────────────────────────────────────────
+node_modules/
+
+# ── Log (dibuat saat aplikasi berjalan) ────────────────────
+*.log
+nodegui.log
+server.log
+
+# ── Data runtime (dibuat otomatis; milik masing-masing pengguna) ──
+# cache kalender, heatmap likuiditas, footprint, preferensi UI
+data/*
+!data/.gitkeep
+
+# Drawing per simbol (dibuat otomatis di root proyek)
+drawings.json
+
+# ── Environment / rahasia ──────────────────────────────────
+.env
+.env.*
+
+# ── Backup & scratch lokal ─────────────────────────────────
+_backup*/
+*.backup.*
+scratch/
+
+# ── OS / editor ────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

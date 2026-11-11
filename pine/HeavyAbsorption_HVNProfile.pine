@@ -1,0 +1,472 @@
+//@version=6
+indicator(
+     "Heavy Absorption + HVN Profile [Combined]",
+     shorttitle       = "HA+HVN",
+     overlay          = true,
+     max_boxes_count  = 500,
+     max_lines_count  = 500,
+     max_labels_count = 500)
+
+// =============================================================================
+//  HEAVY ABSORPTION + HVN PROFILE (COMBINED)
+//  Versi buatan sendiri, terinspirasi dari konsep "Heavy Absorption" dan
+//  "HVN Profile" (ATAS / ProfitPro).
+//
+//  CATATAN PENTING SOAL DATA:
+//  - Pine Script standar TIDAK punya akses ke data bid/ask tick-level asli
+//    seperti ATAS. Satu-satunya jalan mendekati itu di TradingView adalah
+//    request.footprint(), fitur baru yang HANYA aktif untuk plan Premium/
+//    Ultimate, dan hanya untuk timeframe chart yang sedang dibuka.
+//  - Mode "Footprint" di bawah memakai data itu kalau tersedia -> paling akurat.
+//  - Mode "Aproksimasi Intrabar" memakai bar-bar dari timeframe lebih kecil
+//    sebagai proksi buy/sell (bar naik dihitung sbg tekanan beli, bar turun
+//    dihitung sbg tekanan jual). Ini pendekatan/estimasi, BUKAN order-flow
+//    asli, tapi jalan di semua jenis akun/plan.
+//  - HVN Profile dibangun dari volume per level harga (OHLCV biasa), tidak
+//    butuh plan Premium sama sekali.
+//  - Fitur "smoothing passes for plateau detection" dari deskripsi asli
+//    SENGAJA tidak diimplementasikan (di luar cakupan versi ini).
+//  - UPDATE: Value Area Band (POC + VAH/VAL, warna emas/oranye) ditambahkan
+//    supaya tampilannya sesuai referensi HVN Profile di platform ATAS -
+//    terpisah dari zona HVN biru yang sudah ada sebelumnya.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// INPUTS - HEAVY ABSORPTION
+// -----------------------------------------------------------------------------
+grpHA    = "Heavy Absorption - Umum"
+grpHAfp  = "Heavy Absorption - Mode Footprint (Premium/Ultimate)"
+grpHAapx = "Heavy Absorption - Mode Aproksimasi Intrabar"
+
+haEnable    = input.bool(true, "Aktifkan Heavy Absorption", group = grpHA)
+haMode      = input.string("Footprint (Premium/Ultimate)", "Sumber Data",
+                 options = ["Footprint (Premium/Ultimate)", "Aproksimasi Intrabar (semua plan)"],
+                 group   = grpHA,
+                 tooltip = "Footprint = data bid/ask asli per baris harga, butuh plan Premium/Ultimate DAN footprint data tersedia di simbol/timeframe ini. Kalau tidak ada marker sama sekali yang muncul, pindah ke mode Aproksimasi.")
+haLookback  = input.int(100, "Lookback Window (bar)", minval = 20, maxval = 2000, group = grpHA)
+haStdevMult = input.float(2.0, "Sensitivitas (x Standar Deviasi)", minval = 0.1, step = 0.1, group = grpHA)
+haMinVolume = input.float(0.0, "Filter Volume Minimum", minval = 0.0, group = grpHA)
+haMinSize   = input.int(16, "Ukuran Lingkaran Minimum", minval = 6, maxval = 80, group = grpHA)
+haMaxSize   = input.int(44, "Ukuran Lingkaran Maksimum", minval = 6, maxval = 100, group = grpHA)
+haBullColor = input.color(#089981, "Warna Bull (Buy)", group = grpHA)
+haBearColor = input.color(#f23645, "Warna Bear (Sell)", group = grpHA)
+haTextColor = input.color(color.white, "Warna Teks", group = grpHA)
+haAlertOn   = input.bool(false, "Alert Saat Bar Close", group = grpHA)
+
+haTicksPerRow = input.int(10, "Ticks per Row (Footprint)", minval = 1, group = grpHAfp)
+haVaPercent   = input.int(70, "Value Area % (Footprint)", minval = 1, maxval = 100, group = grpHAfp)
+
+haLtf = input.timeframe("1", "Timeframe Intrabar", group = grpHAapx,
+             tooltip = "Wajib lebih kecil dari timeframe chart saat ini.")
+
+// -----------------------------------------------------------------------------
+// INPUTS - HVN PROFILE
+// -----------------------------------------------------------------------------
+grpHVN      = "HVN Profile - Umum"
+grpHVNstyle = "HVN Profile - Tampilan"
+
+hvnEnable     = input.bool(true, "Aktifkan HVN Profile", group = grpHVN)
+hvnAnchor     = input.timeframe("D", "Periode Profile (Anchor)", group = grpHVN)
+hvnRowTicks   = input.int(20, "Tinggi Baris (ticks)", minval = 1, group = grpHVN,
+                 tooltip = "Resolusi histogram volume. Makin kecil = makin detail, tapi makin berat.")
+hvnThreshold  = input.float(70, "Threshold HVN (%)", minval = 1, maxval = 100, group = grpHVN)
+hvnGapTol     = input.int(1, "Toleransi Gap Cluster (baris)", minval = 0, maxval = 20, group = grpHVN)
+hvnMinCluster = input.int(1, "Ukuran Cluster Minimum (baris)", minval = 1, maxval = 20, group = grpHVN)
+hvnGraceBars  = input.int(2, "Grace Bars Sebelum Touch Valid", minval = 0, maxval = 50, group = grpHVN)
+hvnMaxZones   = input.int(15, "Maksimum Zona Tersimpan", minval = 1, maxval = 150, group = grpHVN)
+hvnAlertOn    = input.bool(false, "Alert Saat Zona Tersentuh", group = grpHVN)
+hvnVaPercent  = input.int(70, "Value Area % (POC-based)", minval = 1, maxval = 100, group = grpHVN,
+                 tooltip = "Persentase volume total per periode yang dicakup oleh Value Area Band (VAH-VAL), dihitung mengembang dari POC. Standar market profile = 70%.")
+hvnMaxVaBands = input.int(15, "Maksimum VA Band Tersimpan", minval = 1, maxval = 150, group = grpHVN)
+
+hvnPocExtend       = input.bool(true, "Tampilkan Garis POC", group = grpHVNstyle)
+hvnShowLiveProfile = input.bool(true, "Tampilkan Bentuk Histogram (periode berjalan)", group = grpHVNstyle)
+hvnMaxHistWidth    = input.int(15, "Lebar Maksimum Histogram (bar)", minval = 3, maxval = 60, group = grpHVNstyle)
+hvnZoneColor       = input.color(color.new(color.blue, 75), "Warna Zona (Aktif)", group = grpHVNstyle)
+hvnZoneColorDone   = input.color(color.new(color.gray, 70), "Warna Zona (Tersentuh)", group = grpHVNstyle)
+hvnPocColor        = input.color(color.orange, "Warna Garis POC", group = grpHVNstyle)
+hvnPocWidth        = input.int(2, "Ketebalan Garis POC", minval = 1, maxval = 5, group = grpHVNstyle)
+hvnShowVaBand      = input.bool(true, "Tampilkan Value Area Band (POC ± VA%)", group = grpHVNstyle,
+                 tooltip = "Menampilkan band emas/oranye transparan di sekitar POC (mengikuti tampilan HVN Profile di ATAS), terpisah dari zona HVN biru.")
+hvnVaColor         = input.color(color.new(#E8A33D, 78), "Warna Value Area Band", group = grpHVNstyle)
+hvnLiveTransp      = input.int(85, "Transparansi Histogram Live (%)", minval = 0, maxval = 100, group = grpHVNstyle)
+hvnKeepHistShapes  = input.bool(true, "Simpan Bentuk Histogram Periode Lalu", group = grpHVNstyle,
+                 tooltip = "Kalau aktif, bentuk histogram volume profile (mountain shape) dari periode2 sebelumnya TETAP ditampilkan di chart persis seperti tampilan HVN Profile di ATAS, bukan langsung dihapus begitu periode baru mulai.")
+hvnMaxHistPeriods = input.int(6, "Maksimum Periode Histogram Disimpan", minval = 1, maxval = 40, group = grpHVNstyle,
+                 tooltip = "Jumlah periode lama yang bentuk histogramnya tetap disimpan di chart. TradingView membatasi total box per indikator ke 500, jadi angka ini dibatasi supaya tidak bentrok dengan box milik Zona HVN & histogram live.")
+
+// -----------------------------------------------------------------------------
+// TYPE - satu zona HVN
+// -----------------------------------------------------------------------------
+type ZoneData
+    box   zBox
+    line  pLine
+    float top
+    float bottom
+    float poc
+    int   createdBar
+    bool  touched
+
+// Satu Value Area Band (POC + VAH/VAL) per periode HVN, terpisah dari zona HVN
+type VaData
+    box   vaBox
+    line  pocLine
+    float top
+    float bottom
+    float poc
+    int   createdBar
+    bool  touched
+
+// -----------------------------------------------------------------------------
+// STATE GLOBAL (persist antar bar)
+// -----------------------------------------------------------------------------
+var array<float> haPool      = array.new<float>(0)   // pool ukuran "print" utk statistik (dlm lookback)
+var array<int>   haBarCounts = array.new<int>(0)      // jumlah print per bar, utk eviction FIFO
+var array<float> haQualPool  = array.new<float>(0)    // print yg lolos threshold, utk skala ukuran lingkaran
+
+var map<int, float> curPeriodVol = map.new<int, float>()  // bin index -> volume, periode HVN berjalan
+var map<int, box>   liveBins     = map.new<int, box>()    // bin index -> box histogram live
+var float            maxBinVol   = 0.0
+var array<ZoneData>  activeZones = array.new<ZoneData>(0)
+var array<VaData>    activeVaBands = array.new<VaData>(0)
+var array<box> hvnHistBoxes  = array.new<box>(0)   // arsip box histogram periode2 lalu (flat pool, urut lama->baru)
+var array<int> hvnHistCounts = array.new<int>(0)   // jumlah box per periode di hvnHistBoxes, utk eviction FIFO
+
+// -----------------------------------------------------------------------------
+// HELPER - format angka volume jadi singkat (K/M)
+// -----------------------------------------------------------------------------
+f_fmtVol(float v) =>
+    string txt = "0"
+    if not na(v)
+        if v >= 1000000
+            txt := str.tostring(v / 1000000, "#.##") + "M"
+        else if v >= 1000
+            txt := str.tostring(v / 1000, "#.##") + "K"
+        else
+            txt := str.tostring(v, "#")
+    txt
+
+// -----------------------------------------------------------------------------
+// HELPER - cluster bin2 HVN yg lolos threshold jadi zona2
+// qualKeys HARUS sudah terurut ascending & hanya berisi bin yg lolos threshold
+// -----------------------------------------------------------------------------
+f_clusterHvn(array<int> qualKeys, map<int, float> volMap, int gapTol, int minClusterCount) =>
+    array<int> outBot = array.new<int>(0)
+    array<int> outTop = array.new<int>(0)
+    array<int> outPoc = array.new<int>(0)
+    int n = array.size(qualKeys)
+    if n > 0
+        int groupStart = array.get(qualKeys, 0)
+        int groupEnd   = groupStart
+        int groupCount = 1
+        int pocKey     = groupStart
+        float pocVol   = map.get(volMap, groupStart)
+        if n > 1
+            for i = 1 to n - 1
+                int k = array.get(qualKeys, i)
+                if k - groupEnd <= gapTol + 1
+                    groupEnd := k
+                    groupCount += 1
+                    float v = map.get(volMap, k)
+                    if v > pocVol
+                        pocVol := v
+                        pocKey := k
+                else
+                    if groupCount >= minClusterCount
+                        array.push(outBot, groupStart)
+                        array.push(outTop, groupEnd)
+                        array.push(outPoc, pocKey)
+                    groupStart := k
+                    groupEnd   := k
+                    groupCount := 1
+                    pocKey     := k
+                    pocVol     := map.get(volMap, k)
+        if groupCount >= minClusterCount
+            array.push(outBot, groupStart)
+            array.push(outTop, groupEnd)
+            array.push(outPoc, pocKey)
+    [outBot, outTop, outPoc]
+
+// -----------------------------------------------------------------------------
+// HELPER - hitung Value Area (VAH/VAL) & POC dari satu periode HVN penuh
+// Mengembang dari bin POC ke atas/bawah sampai vaPercent% dari total volume
+// periode tercakup. Ini konsep "Value Area" market profile standar, TERPISAH
+// dari zona HVN (yang dihitung dari threshold per-bin di f_clusterHvn).
+// Mengembalikan [vaLowBin, vaHighBin, pocBin]
+// -----------------------------------------------------------------------------
+f_calcValueArea(array<int> allKeys, map<int, float> volMap, int vaPercent) =>
+    float totalVol = 0.0
+    int pocKey  = array.get(allKeys, 0)
+    float pocVol = 0.0
+    int minKey  = array.get(allKeys, 0)
+    int maxKey  = array.get(allKeys, 0)
+    for k in allKeys
+        float v = map.get(volMap, k)
+        totalVol += v
+        if v > pocVol
+            pocVol := v
+            pocKey := k
+        if k < minKey
+            minKey := k
+        if k > maxKey
+            maxKey := k
+    int vaLow  = pocKey
+    int vaHigh = pocKey
+    float vaVol = pocVol
+    float target = totalVol * vaPercent / 100.0
+    while vaVol < target and (vaLow > minKey or vaHigh < maxKey)
+        bool canUp   = vaHigh < maxKey
+        bool canDown = vaLow  > minKey
+        float volAbove = canUp   and map.contains(volMap, vaHigh + 1) ? map.get(volMap, vaHigh + 1) : 0.0
+        float volBelow = canDown and map.contains(volMap, vaLow  - 1) ? map.get(volMap, vaLow  - 1) : 0.0
+        if canUp and (not canDown or volAbove >= volBelow)
+            vaHigh += 1
+            vaVol  += volAbove
+        else if canDown
+            vaLow -= 1
+            vaVol += volBelow
+        else
+            break
+    [vaLow, vaHigh, pocKey]
+
+// -----------------------------------------------------------------------------
+// HELPER - finalisasi periode HVN yg baru saja selesai
+// -----------------------------------------------------------------------------
+f_finalizePeriod(float rowHeight) =>
+    array<int> allKeys = map.keys(curPeriodVol)
+    if array.size(allKeys) > 0
+        float maxVol = 0.0
+        for k in allKeys
+            float v = map.get(curPeriodVol, k)
+            if v > maxVol
+                maxVol := v
+        array<int> qualKeys = array.new<int>(0)
+        if maxVol > 0
+            for k in allKeys
+                if map.get(curPeriodVol, k) >= hvnThreshold / 100.0 * maxVol
+                    array.push(qualKeys, k)
+        array.sort(qualKeys)
+        [cBot, cTop, cPoc] = f_clusterHvn(qualKeys, curPeriodVol, hvnGapTol, hvnMinCluster)
+        for ci = 0 to array.size(cBot) - 1
+            int botKey  = array.get(cBot, ci)
+            int topKey  = array.get(cTop, ci)
+            int pocKey  = array.get(cPoc, ci)
+            float zTop  = (topKey + 1) * rowHeight
+            float zBot  = botKey * rowHeight
+            float zPoc  = (pocKey + 0.5) * rowHeight
+            box zBoxId  = box.new(left = bar_index, top = zTop, bottom = zBot, right = bar_index,
+                               border_color = hvnZoneColor, bgcolor = hvnZoneColor, extend = extend.none)
+            ZoneData zd = ZoneData.new(zBoxId, na, zTop, zBot, zPoc, bar_index, false)
+            array.push(activeZones, zd)
+        while array.size(activeZones) > hvnMaxZones
+            ZoneData oldZone = array.shift(activeZones)
+            box.delete(oldZone.zBox)
+            if not na(oldZone.pLine)
+                line.delete(oldZone.pLine)
+
+        // Value Area Band (POC ± VA%) - satu per periode, gaya HVN Profile ATAS
+        if hvnShowVaBand
+            [vaLow, vaHigh, vaPocKey] = f_calcValueArea(allKeys, curPeriodVol, hvnVaPercent)
+            float vaTop     = (vaHigh + 1) * rowHeight
+            float vaBot     = vaLow * rowHeight
+            float pocPrice  = (vaPocKey + 0.5) * rowHeight
+            box vaBoxId = box.new(left = bar_index, top = vaTop, bottom = vaBot, right = bar_index,
+                               border_color = hvnVaColor, bgcolor = hvnVaColor, extend = extend.none)
+            line pocLineId = na
+            if hvnPocExtend
+                pocLineId := line.new(bar_index, pocPrice, bar_index, pocPrice, color = hvnPocColor, width = hvnPocWidth, style = line.style_solid)
+            VaData vd = VaData.new(vaBoxId, pocLineId, vaTop, vaBot, pocPrice, bar_index, false)
+            array.push(activeVaBands, vd)
+            while array.size(activeVaBands) > hvnMaxVaBands
+                VaData oldVa = array.shift(activeVaBands)
+                box.delete(oldVa.vaBox)
+                if not na(oldVa.pocLine)
+                    line.delete(oldVa.pocLine)
+
+// -----------------------------------------------------------------------------
+// LOGIKA - HEAVY ABSORPTION (jalan tiap bar kalau diaktifkan)
+// -----------------------------------------------------------------------------
+if haEnable
+    bool useFootprint = haMode == "Footprint (Premium/Ultimate)"
+
+    array<float> printVol   = array.new<float>(0)
+    array<bool>  printIsBuy = array.new<bool>(0)
+    array<float> printPrice = array.new<float>(0)
+
+    if useFootprint
+        footprint fp = request.footprint(haTicksPerRow, haVaPercent)
+        if not na(fp)
+            array<volume_row> fRows = fp.rows()
+            for vRow in fRows
+                float rBuy   = vRow.buy_volume()
+                float rSell  = vRow.sell_volume()
+                float rTotal = rBuy + rSell
+                if rTotal > 0
+                    array.push(printVol, rTotal)
+                    array.push(printIsBuy, rBuy >= rSell)
+                    array.push(printPrice, (vRow.up_price() + vRow.down_price()) / 2.0)
+    else
+        array<float> ltfClose  = request.security_lower_tf(syminfo.tickerid, haLtf, close,  ignore_invalid_timeframe = true)
+        array<float> ltfOpen   = request.security_lower_tf(syminfo.tickerid, haLtf, open,   ignore_invalid_timeframe = true)
+        array<float> ltfVolume = request.security_lower_tf(syminfo.tickerid, haLtf, volume, ignore_invalid_timeframe = true)
+        if not na(ltfClose) and not na(ltfOpen) and not na(ltfVolume)
+            int nI = math.min(math.min(array.size(ltfClose), array.size(ltfOpen)), array.size(ltfVolume))
+            int loopLimit = math.min(nI, 2000)
+            if loopLimit > 0
+                for idx = 0 to loopLimit - 1
+                    float ic = array.get(ltfClose, idx)
+                    float io = array.get(ltfOpen, idx)
+                    float iv = array.get(ltfVolume, idx)
+                    if iv > 0
+                        array.push(printVol, iv)
+                        array.push(printIsBuy, ic >= io)
+                        array.push(printPrice, ic)
+
+    int cnt = array.size(printVol)
+    for pv in printVol
+        array.push(haPool, pv)
+    array.push(haBarCounts, cnt)
+    if array.size(haBarCounts) > haLookback
+        int oldest = array.shift(haBarCounts)
+        for _x = 1 to oldest
+            array.shift(haPool)
+
+    float haThreshold = na
+    if array.size(haPool) >= 20
+        haThreshold := array.avg(haPool) + haStdevMult * array.stdev(haPool)
+
+    if not na(haThreshold) and cnt > 0
+        float bestBuyVol   = na
+        float bestBuyPrice = na
+        float bestSellVol   = na
+        float bestSellPrice = na
+        for pi = 0 to cnt - 1
+            float v  = array.get(printVol, pi)
+            bool isB = array.get(printIsBuy, pi)
+            float p  = array.get(printPrice, pi)
+            if v >= haThreshold and v >= haMinVolume
+                if isB
+                    if na(bestBuyVol) or v > bestBuyVol
+                        bestBuyVol   := v
+                        bestBuyPrice := p
+                else
+                    if na(bestSellVol) or v > bestSellVol
+                        bestSellVol   := v
+                        bestSellPrice := p
+
+        float sizeRef = array.size(haQualPool) > 0 ? array.max(haQualPool) : haThreshold
+        sizeRef := math.max(sizeRef, 1.0)
+
+        if not na(bestBuyVol)
+            float ratio = math.min(1.0, math.sqrt(bestBuyVol / sizeRef))
+            int sz = int(math.round(haMinSize + (haMaxSize - haMinSize) * ratio))
+            label.new(bar_index, bestBuyPrice, f_fmtVol(bestBuyVol), style = label.style_circle, size = sz, color = haBullColor, textcolor = haTextColor)
+            array.push(haQualPool, bestBuyVol)
+            if array.size(haQualPool) > 50
+                array.shift(haQualPool)
+            if haAlertOn and barstate.isconfirmed
+                alert("Heavy Absorption BUY: " + f_fmtVol(bestBuyVol) + " @ " + str.tostring(bestBuyPrice), alert.freq_once_per_bar)
+
+        if not na(bestSellVol)
+            float ratio2 = math.min(1.0, math.sqrt(bestSellVol / sizeRef))
+            int sz2 = int(math.round(haMinSize + (haMaxSize - haMinSize) * ratio2))
+            label.new(bar_index, bestSellPrice, f_fmtVol(bestSellVol), style = label.style_circle, size = sz2, color = haBearColor, textcolor = haTextColor)
+            array.push(haQualPool, bestSellVol)
+            if array.size(haQualPool) > 50
+                array.shift(haQualPool)
+            if haAlertOn and barstate.isconfirmed
+                alert("Heavy Absorption SELL: " + f_fmtVol(bestSellVol) + " @ " + str.tostring(bestSellPrice), alert.freq_once_per_bar)
+
+// -----------------------------------------------------------------------------
+// LOGIKA - HVN PROFILE (jalan tiap bar kalau diaktifkan)
+// -----------------------------------------------------------------------------
+if hvnEnable
+    float rowHeight = hvnRowTicks * syminfo.mintick
+
+    bool newPeriod = timeframe.change(hvnAnchor)
+    if newPeriod
+        f_finalizePeriod(rowHeight)
+        curPeriodVol := map.new<int, float>()
+        maxBinVol := 0.0
+        if hvnKeepHistShapes and map.size(liveBins) > 0
+            array<int> lbKeys = map.keys(liveBins)
+            for k in lbKeys
+                array.push(hvnHistBoxes, map.get(liveBins, k))
+            array.push(hvnHistCounts, array.size(lbKeys))
+            while array.size(hvnHistCounts) > hvnMaxHistPeriods
+                int oldestCount = array.shift(hvnHistCounts)
+                for _x = 1 to oldestCount
+                    box.delete(array.shift(hvnHistBoxes))
+        else
+            array<int> oldLiveKeys = map.keys(liveBins)
+            for k in oldLiveKeys
+                box.delete(map.get(liveBins, k))
+        liveBins := map.new<int, box>()
+
+    int topBin = int(math.floor(high / rowHeight))
+    int botBin = int(math.floor(low  / rowHeight))
+    int nBins  = topBin - botBin + 1
+
+    if nBins > 200
+        int singleBin  = int(math.floor(close / rowHeight))
+        float existingS = map.contains(curPeriodVol, singleBin) ? map.get(curPeriodVol, singleBin) : 0.0
+        float newVolS   = existingS + volume
+        map.put(curPeriodVol, singleBin, newVolS)
+        if newVolS > maxBinVol
+            maxBinVol := newVolS
+    else
+        float volPerBin = volume / nBins
+        for binIdx = botBin to topBin
+            float existing = map.contains(curPeriodVol, binIdx) ? map.get(curPeriodVol, binIdx) : 0.0
+            float newVol   = existing + volPerBin
+            map.put(curPeriodVol, binIdx, newVol)
+            if newVol > maxBinVol
+                maxBinVol := newVol
+
+    array<int> curKeys = map.keys(curPeriodVol)
+    if hvnShowLiveProfile and maxBinVol > 0 and array.size(curKeys) <= 100
+        for k in curKeys
+            float v = map.get(curPeriodVol, k)
+            int widthBars = math.max(1, int(math.round(hvnMaxHistWidth * v / maxBinVol)))
+            float binBot = k * rowHeight
+            float binTop = (k + 1) * rowHeight
+            if map.contains(liveBins, k)
+                box existBox = map.get(liveBins, k)
+                box.set_left(existBox, bar_index - widthBars)
+                box.set_right(existBox, bar_index)
+            else
+                box newBox = box.new(left = bar_index - widthBars, top = binTop, bottom = binBot, right = bar_index,
+                                   bgcolor = color.new(hvnZoneColor, hvnLiveTransp), border_color = color.new(hvnZoneColor, 100), extend = extend.none)
+                map.put(liveBins, k, newBox)
+
+    if array.size(activeZones) > 0
+        for zi = 0 to array.size(activeZones) - 1
+            ZoneData zd = array.get(activeZones, zi)
+            if not zd.touched
+                bool pastGrace = bar_index - zd.createdBar >= hvnGraceBars
+                bool touchNow  = pastGrace and low <= zd.top and high >= zd.bottom
+                if touchNow
+                    zd.touched := true
+                    box.set_bgcolor(zd.zBox, hvnZoneColorDone)
+                    box.set_border_color(zd.zBox, hvnZoneColorDone)
+                    if hvnAlertOn and barstate.isconfirmed
+                        alert("HVN zone tersentuh: " + str.tostring(zd.bottom) + " - " + str.tostring(zd.top), alert.freq_once_per_bar)
+                else
+                    box.set_right(zd.zBox, bar_index)
+                    if not na(zd.pLine)
+                        line.set_x2(zd.pLine, bar_index)
+
+    if array.size(activeVaBands) > 0
+        for vi = 0 to array.size(activeVaBands) - 1
+            VaData vd = array.get(activeVaBands, vi)
+            if not vd.touched
+                bool vaPastGrace = bar_index - vd.createdBar >= hvnGraceBars
+                bool vaTouchNow  = vaPastGrace and low <= vd.top and high >= vd.bottom
+                if vaTouchNow
+                    vd.touched := true
+                    box.set_bgcolor(vd.vaBox, hvnZoneColorDone)
+                    box.set_border_color(vd.vaBox, hvnZoneColorDone)
+                else
+                    box.set_right(vd.vaBox, bar_index)
+                    if not na(vd.pocLine)
+                        line.set_x2(vd.pocLine, bar_index)

@@ -1,0 +1,20 @@
+{
+  "name": "hf-terminal",
+  "version": "1.0.0",
+  "description": "Hedge Fund Trading Terminal — Bybit Perpetuals via TradingView (NodeGUI desktop, tanpa port localhost)",
+  "main": "nodegui/main.js",
+  "scripts": {
+    "start": "node ./node_modules/@nodegui/nodegui/scripts/qode.js ./nodegui/main.js",
+    "gui": "node ./node_modules/@nodegui/nodegui/scripts/qode.js ./nodegui/main.js",
+    "web": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@nodegui/nodegui": "^0.74.2",
+    "express": "^4.19.2",
+    "ws": "^8.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
