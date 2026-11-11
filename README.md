@@ -83,8 +83,8 @@ Semua sumber di atas adalah **data publik**: tidak ada API key dan tidak ada eks
 ## Instalasi Cepat
 
 ```powershell
-git clone https://github.com/<username>/hf-terminal.git
-cd hf-terminal
+git clone https://github.com/mastersyariq/Terminal-Crypto-V.1.1.git
+cd Terminal-Crypto-V.1.1
 npm install        # atau: npm ci  (instal persis sesuai package-lock.json)
 ```
 
